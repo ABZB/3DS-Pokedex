@@ -128,18 +128,29 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         crnt_eggmov = eggmov_info[egg_pointer]
     
         #egg moves
+        #first byte is count of egg moves, second empty
         if(dex_creation_data.game in {'XY', 'ORAS'}):
             temp[0] = crnt_eggmov[0]
             for x in range(2,len(crnt_eggmov)):
                 temp.append(x)
+        #first two bytes are the pointer to alt forme egg move (or self if no alt forme), next two same as XY/ORAS
         else:
             temp[0] = crnt_eggmov[2]
             for x in range(4,len(crnt_eggmov)):
                 temp.append(x)
         
             
-    
-
+    #evolves into handling
+              
+    #in USUM, eight slots, each of eight bytes
+    #0x0 - Evolution type
+    #0x1 - unused
+    #0x2 - other parameter low byte
+    #0x3 - other parameter high byte
+    #0x4 - target species low byte
+    #0x5 - target species high byte
+    #0x6 - Target forme (FF is preserve current)
+    #0x7 - Level (0 is "NA")
 
 
 

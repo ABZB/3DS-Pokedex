@@ -1,6 +1,8 @@
 from tkinter import *
 from dex_creator_file_loader import *
 from dex_creator_class import *
+from dex_constructor import *
+from utilities import *
 
 
 def create_pokedex_database(dex_creation_data):
