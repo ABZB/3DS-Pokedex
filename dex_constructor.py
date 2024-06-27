@@ -106,6 +106,65 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
 
 
 
+
+
+def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex = 1, current_forme = 0, forme_count = 0, pers_pointer = 1, egg_pointer = 1):
+    
+    #this will hold the data for this Pokemon
+    temp = [0]*64
+            
+    #personal, evolution, levelup, are by personal file index and exist for all
+    crnt_personal = personal_info[pers_pointer]
+    crnt_evolution = evolution_info[pers_pointer]
+    crnt_levelup = levelup_info[pers_pointer]
+                
+    #megas only exist for forme 0
+    if(current_forme == 0):
+        crnt_mega = mega_info[pers_pointer]
+        
+
+    #egg move handling
+    if(egg_pointer != 0):
+        crnt_eggmov = eggmov_info[egg_pointer]
+    
+        #egg moves
+        if(dex_creation_data.game in {'XY', 'ORAS'}):
+            temp[0] = crnt_eggmov[0]
+            for x in range(2,len(crnt_eggmov)):
+                temp.append(x)
+        else:
+            temp[0] = crnt_eggmov[2]
+            for x in range(4,len(crnt_eggmov)):
+                temp.append(x)
+        
+            
+    
+
+
+
+
+
+
+
+
+    if(forme_pointer != 0):
+        if(current_forme < forme_count):
+            #set up egg pointer for alternate forme:
+            if(current_forme == 0):
+                if(dex_creation_data.game in {'SM', 'USUM'}):
+                    temp_egg_pointer = crnt_eggmov[0] + crnt_eggmov[1]*256
+                else:
+                    temp_egg_pointer = 0
+    
+            output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer)
+    #personal info has length total personal files + 1.
+    #move to next species        
+    elif(pers_pointer + 1 < len(personal_info)):
+        output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex + 1, 0, 0, nat_dex + 1, nat_dex + 1)
+        
+
+    return(output_array)
+
 def create_pokedex_database(dex_creation_data):
     
     #construct the objects that will hold the various GARC reference data
@@ -247,25 +306,8 @@ def create_pokedex_database(dex_creation_data):
     output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, [])
 
     with open(dex_database_output_path, "r+b") as file_dex:
-        with mmap.mmap(file_dex.fileno(), length = 0, access=mmap.ACCESS_WRITE) as dex:
-            dex.flush()
-
-
-def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex = 1, current_forme = 0, forme_count = 0, pers_pointer = 1, egg_pointer = 1):
-    
-            
-    #personal, evolution, levelup, are by personal file index and exist for all
-    crnt_personal = personal_info[pers_pointer]
-    crnt_evolution = evolution_info[pers_pointer]
-    crnt_levelup = levelup_info[pers_pointer]
-                
-    #megas only exist for forme 0
-    if(current_forme == 0):
-        crnt_mega = mega_info[pers_pointer]
-                
-    if(egg_pointer != 0):
-        crnt_eggmov = eggmov_info[egg_pointer]
-    
+        for x in output_array:
+            file_dex.write(x)
 
 
 
@@ -273,20 +315,8 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
 
 
 
-    if(forme_pointer != 0):
-        if(current_forme < forme_count):
-            #set up egg pointer for alternate forme:
-            if(current_forme == 0):
-                if(dex_creation_data.game in {'SM', 'USUM'}):
-                    temp_egg_pointer = crnt_eggmov[0] + crnt_eggmov[1]*256
-                else:
-                    temp_egg_pointer = 0
-    
-            output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer)
-    #personal info has length total personal files + 1.
-    #move to next species        
-    elif(pers_pointer + 1 < len(personal_info)):
-        output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex + 1, 0, 0, nat_dex + 1, nat_dex + 1)
-        
 
-    return(output_array)
+
+
+
+
