@@ -17,8 +17,11 @@ def gen_vi_egg_garc_handling(garc_info, dex_creation_data):
 #for XY/ORAS, calls a different function for Egg
 def garc_parser(garc_info, dex_creation_data, which_garc = ''):
     
-    if(which_garc == 'egg' and dex_creation_data.game in {'XY', 'ORAS'}):
-        return(gen_vi_egg_garc_handling(garc_info, dex_creation_data))
+    #since the 0th entry is never used, just make it a single 0 entry to keep everything in line
+    output_file = [[0]]
+    
+    if(which_garc == 'eggmov' and dex_creation_data.game in {'XY', 'ORAS'}):
+        return(gen_vi_egg_garc_handling(garc_info))
 
     with open(garc_info.path, 'rb') as f:
         hexdata = f.read()
@@ -33,13 +36,69 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
         elif(cur == garc_filesize):
             print('Something is wrong with your Garc file ' + which_garc + ', could not locate the header.')
             return(False)
+        cur += 1
+    
+    #handling for GARCs with fixed blocksizes is straightforward
+    if(garc_info.blocksize >0):
+        #cur is now pointing to the first byte of the first data block
+        while True:
+            temp = []
+            for offset in range(garc_info.blocksize):
+                temp.append(hexdata[cur + offset])
+            #temp now contains the data from the current block
             
-    
-            personal.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/7")
-            personal.header = [0x42, 0x4D, 0x49, 0x46]
-            personal.start = 0x5C
-            personal.blocksize = 0x50
-    
+            #increment cur by the blocksize for next round
+            cur += garc_info.blocksize
+        
+            #logic to avoid doubling up on the personal file
+            #if all stats are 0, and the next byte is the same as the very first one we read, we are at compilation, so break
+            if(which_garc == 'personal' and (temp[0] == temp[1] == temp[2] == temp[3] == temp[4] == temp[5] == temp[6] == 0) and hexdata[cur] == output_file[1][0]):
+                print('Reached end of Personal file at address ', cur - garc_info.blocksize - 1)
+                break
+            else:
+                #otherwise append temp to the ongoing list
+                output_file.append(temp)
+
+            #if this pushes it past the end of the file, break
+            if(cur >= garc_filesize):
+                break
+    elif(which_garc == 'eggmov'):
+        
+        while True:
+            temp = []
+            #first read bytes at offsets 2 and 3, because that tells the size of the block
+            block_length = hexdata[cur + 3]*256+hexdata[cur + 2]
+
+            #this is the number of egg moves. Each egg move is 2 bytes, plus the 4-byte header
+            block_length = 2*block_length + 4
+            
+            for offset in range(block_length):
+                temp.append(hexdata[cur + offset])
+            
+            output_file.append(temp)
+            
+            cur += block_length
+            if(cur >= garc_filesize):
+                break
+    elif(which_garc == 'levelup'):
+        #Levelup uses terminator block FF FF FF FF
+        while True:
+            temp = []
+            block_size = 0
+            
+            while True:
+                temp.append(hexdata[cur])
+                cur += 1
+                #next four bytes being FF means we are at the end
+                if(0xFF == hexdata[cur + 1] == hexdata[cur + 2] == hexdata[cur + 3] == hexdata[cur + 4]):
+                    break
+
+            output_file.append(temp)
+            
+            cur += 5
+            if(cur >= garc_filesize):
+                break
+    return(output_file)
 
 
 
