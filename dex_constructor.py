@@ -109,7 +109,7 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
 
 
 def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex = 1, current_forme = 0, forme_count = 0, pers_pointer = 1, egg_pointer = 1):
-    
+    print('Now compiling data on: ', nat_dex, current_forme)
     #this will hold the data for this Pokemon
     temp = [0]*64
             
