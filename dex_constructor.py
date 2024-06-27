@@ -1,3 +1,4 @@
+from msilib import CreateRecord
 from dex_creator_file_loader import *
 from dex_creator_class import *
 from utilities import *
@@ -126,18 +127,25 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
     #egg move handling
     if(egg_pointer != 0):
         crnt_eggmov = eggmov_info[egg_pointer]
-    
-        #egg moves
-        #first byte is count of egg moves, second empty
-        if(dex_creation_data.game in {'XY', 'ORAS'}):
-            temp[0] = crnt_eggmov[0]
-            for x in range(2,len(crnt_eggmov)):
-                temp.append(x)
-        #first two bytes are the pointer to alt forme egg move (or self if no alt forme), next two same as XY/ORAS
+        
+        #if the egg pointer doesn't equal the current egg pointer value, we're on an alt forme that doesn't have an egg move file. If length of crnt_eggmov is 0, no egg moves (no need to set 0, since default value is 0)
+        if(len(crnt_eggmov) == 0):
+            pass
+        elif(crnt_eggmov[0] + crnt_eggmov[1]*256 != egg_pointer):
+            egg_pointer = 0
         else:
-            temp[0] = crnt_eggmov[2]
-            for x in range(4,len(crnt_eggmov)):
-                temp.append(x)
+    
+            #egg moves
+            #first byte is count of egg moves, second empty
+            if(dex_creation_data.game in {'XY', 'ORAS'}):
+                temp[0] = crnt_eggmov[0]
+                for x in range(2,len(crnt_eggmov)):
+                    temp.append(x)
+            #first two bytes are the pointer to alt forme egg move (or self if no alt forme), next two same as XY/ORAS
+            else:
+                temp[0] = crnt_eggmov[2]
+                for x in range(4,len(crnt_eggmov)):
+                    temp.append(x)
         
             
     #evolves into handling
@@ -158,16 +166,20 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
 
 
 
-    if(forme_pointer != 0):
-        if(current_forme < forme_count):
+    if(forme_pointer != 0 and current_forme + 1 < forme_count):
+        #forme starts from 0, e.g. if no alt formes forme count is 1 and current forme is 0
+        if(egg_pointer != 0):
             #set up egg pointer for alternate forme:
-            if(current_forme == 0):
-                if(dex_creation_data.game in {'SM', 'USUM'}):
-                    temp_egg_pointer = crnt_eggmov[0] + crnt_eggmov[1]*256
-                else:
-                    temp_egg_pointer = 0
+            if(dex_creation_data.game in {'XY', 'ORAS'}):
+                temp_egg_pointer = 0
+            elif(current_forme == 0):
+                temp_egg_pointer = crnt_eggmov[0] + crnt_eggmov[1]*256
+            else:
+                temp_egg_pointer = egg_pointer + 1
+        else:
+            temp_egg_pointer = 0
+        output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer)
     
-            output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer)
     #personal info has length total personal files + 1.
     #move to next species        
     elif(pers_pointer + 1 < len(personal_info)):
