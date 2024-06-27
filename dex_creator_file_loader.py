@@ -11,9 +11,9 @@ def select_name_source_file(dex_creation_data, name_text_options_temp):
     
     dex_creation_data.pokemon_name_loading_option = name_text_options_temp
     if(name_text_options_temp == 'Forme Insertion CSV'):
-        dex_creation_data.insertion_output_list = askopenfilename(title='Select CSV output from Forme Insertion Tool', defaultextension='.csv')
+        dex_creation_data.insertion_output_list = askopenfilename(title='Select CSV output from Forme Insertion Tool', defaultextension='.csv',filetypes= [('Comma Seperated Value','.csv')])
     elif(name_text_options_temp == 'User Text File'):
-        dex_creation_data.text_file_name_list = askopenfilename(title='Select Text File where each line has that Personal File index Forme name', defaultextension='.csv')
+        dex_creation_data.text_file_name_list = askopenfilename(title='Select Text File where each line has that Personal File index Forme name', defaultextension='.csv',filetypes= [('Comma Seperated Value','.csv')])
     else:
         print('Default option is selected, no file to load')
         #set to default to avoid edge cases

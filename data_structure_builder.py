@@ -12,7 +12,6 @@ def create_pokedex_database(dex_creation_data):
 
 
 
-
 def set_checklists(gameinput, textoptioninput):
     games_temp.set(gameinput)
     name_text_options_temp.set(textoptioninput)
