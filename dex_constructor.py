@@ -109,10 +109,10 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
 
 
 
-def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex = 1, current_forme = 0, forme_count = 0, pers_pointer = 1, egg_pointer = 1):
+def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex = 1, current_forme = 0, forme_count = 0, pers_pointer = 1, egg_pointer = 1):
     print('Now compiling data on: ', nat_dex, current_forme)
     #this will hold the data for this Pokemon
-    temp = [0]*64
+    output_array = [0]*64
             
     #personal, evolution, levelup, are by personal file index and exist for all
     crnt_personal = personal_info[pers_pointer]
@@ -138,17 +138,17 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             #egg moves
             #first byte is count of egg moves, second empty
             if(dex_creation_data.game in {'XY', 'ORAS'}):
-                temp[0] = crnt_eggmov[0]
+                output_array[0] = crnt_eggmov[0]
                 for x in range(2,len(crnt_eggmov)):
-                    temp.append(x)
+                    output_array.append(x)
             #first two bytes are the pointer to alt forme egg move (or self if no alt forme), next two same as XY/ORAS
             else:
-                temp[0] = crnt_eggmov[2]
+                output_array[0] = crnt_eggmov[2]
                 for x in range(4,len(crnt_eggmov)):
-                    temp.append(x)
+                    output_array.append(x)
         
             
-    #evolves into handling
+    #evolves-into handling
               
     #in USUM, eight slots, each of eight bytes
     #0x0 - Evolution type
@@ -160,10 +160,73 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
     #0x6 - Target forme (FF is preserve current)
     #0x7 - Level (0 is "NA")
 
+    #in XYORAS
+    #0x0 - Evolution type
+    #0x1 - unused
+    #0x2 - other parameter low byte
+    #0x3 - other parameter high byte
+    #0x4 - target species low byte
+    #0x5 - target species high byted
+    
+    evolution_count = 0
+    
+    while True:
+        cur = evo_block_size*evolution_count
+        
+        if(cur >= len(crnt_evolution)):
+            break
+        #if this is 0, this evolution is disabled and the evolution list has ended
+        elif(crnt_evolution[cur] == 0):
+            break
+        else:
+            #append method
+            output_array.append(crnt_evolution[cur + 0])
+            #append species
+            output_array.append(crnt_evolution[cur + 4])
+            output_array.append(crnt_evolution[cur + 5])
+            
+            #append forme
+            
+            #in gen VI, forme is not changed unless method is 0x22 (sets to forme 1)
+            if(dex_creation_data.game in {'XY', 'ORAS'}):
+                if(crnt_evolution[cur + 0] == 0x22):
+                    output_array.append(0x1)
+                else:
+                    output_array.append(current_forme)
+            else:
+                output_array.append(crnt_evolution[cur + 6])
+                
+            #this holds the Item, Move, or Type for evolution methods that use that. In XYORAS, this is incompatible with level-up as that uses the same byte
+            if(dex_creation_data.game in {'XY', 'ORAS'}):
+                if(crnt_evolution[cur + 0] in {1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16, 28, 32, 33, 34}):
+                    #parameter does not exist
+                    output_array.append(0)
+                    output_array.append(0)
+                    #level
+                    output_array.append(crnt_evolution[cur + 2])
+                else:
+                    #other parameter
+                    output_array.append(crnt_evolution[cur + 2])
+                    output_array.append(crnt_evolution[cur + 3])
+                    #level
+                    output_array.append(0)
+            
+            #SMUSUM
+            else:
+                #other parameter
+                output_array.append(crnt_evolution[cur + 2])
+                output_array.append(crnt_evolution[cur + 3])
+                #Level
+                output_array.append(crnt_evolution[cur + 7])
 
-
-
-
+        evolution_count += 1
+                
+                
+                
+            
+        
+    output_array[1] = evolution_count
+        
 
 
     if(forme_pointer != 0 and current_forme + 1 < forme_count):
@@ -178,12 +241,12 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                 temp_egg_pointer = egg_pointer + 1
         else:
             temp_egg_pointer = 0
-        output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer)
+        output_array.append(power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer))
     
     #personal info has length total personal files + 1.
     #move to next species        
     elif(pers_pointer + 1 < len(personal_info)):
-        output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex + 1, 0, 0, nat_dex + 1, nat_dex + 1)
+        output_array.append(power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex + 1, 0, 0, nat_dex + 1, nat_dex + 1))
         
 
     return(output_array)
@@ -326,7 +389,7 @@ def create_pokedex_database(dex_creation_data):
     eggmov_info = garc_parser(eggmov, dex_creation_data, which_garc = 'eggmov')
     mega_info = garc_parser(mega, dex_creation_data, which_garc = 'mega')
  
-    output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, [])
+    output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evolution.blocksize/8)
 
     with open(dex_database_output_path, "r+b") as file_dex:
         for x in output_array:
