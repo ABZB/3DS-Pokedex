@@ -71,7 +71,7 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
         while True:
             temp = []
             #first read bytes at offsets 2 and 3, because that tells the size of the block
-            block_length = hexdata[cur + 3]*256+hexdata[cur + 2]
+            block_length = hexdata[cur + 2] + hexdata[cur + 3]*256
 
             #this is the number of egg moves. Each egg move is 2 bytes, plus the 4-byte header
             block_length = 2*block_length + 4
@@ -108,8 +108,6 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
 
 def create_pokedex_database(dex_creation_data):
     
-
-    
     #construct the objects that will hold the various GARC reference data
     personal = GARC_file_info()
     evolution = GARC_file_info()
@@ -119,7 +117,15 @@ def create_pokedex_database(dex_creation_data):
     
     move = GARC_file_info()
     
+    #select database for output
+    #don't need this until later, but let's do this first so if it screws up user hasn't waited for everything else
+    dex_database_output_path = asksaveasfilename(title='Select location to save database for Pokedex', defaultextension='.db',filetypes= [('Database','.db')])
 
+    try:
+        open(dex_database_output_path, 'w').close()
+        print('Cleared old data')
+    except:
+        print('')
 
     
     match dex_creation_data.game:
@@ -198,7 +204,7 @@ def create_pokedex_database(dex_creation_data):
             personal.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/7")
             personal.header = [0x42, 0x4D, 0x49, 0x46]
             personal.start = 0x5C
-            personal.blocksize = 0x50
+            personal.blocksize = 0x54
             
         case "USUM":
             eggmov.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/2")
@@ -222,7 +228,7 @@ def create_pokedex_database(dex_creation_data):
             personal.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/7")
             personal.header = [0x42, 0x4D, 0x49, 0x46]
             personal.start = 0x5C
-            personal.blocksize = 0x50
+            personal.blocksize = 0x54
             
 
     
@@ -232,25 +238,55 @@ def create_pokedex_database(dex_creation_data):
     eggmov = GARC_file_info()
     mega = GARC_file_info()
     
-    prsnl_info = garc_parser(personal, dex_creation_data, which_garc = 'personal')
-    vltn_info = garc_parser(evolution, dex_creation_data, which_garc = 'evolution')
-    lvlp_info = garc_parser(levelup, dex_creation_data, which_garc = 'levelup')
-    ggmv_info = garc_parser(eggmov, dex_creation_data, which_garc = 'eggmov')
-    mg_info = garc_parser(mega, dex_creation_data, which_garc = 'mega')
-    
-
-    #select database for output
-    dex_database_output_path = asksaveasfilename(title='Select location to save database for Pokedex', defaultextension='.db',filetypes= [('Database','.db')])
-
-    try:
-        open(dex_database_output_path, 'w').close()
-        print('Cleared old data')
-    except:
-        print('')
+    personal_info = garc_parser(personal, dex_creation_data, which_garc = 'personal')
+    evolution_info = garc_parser(evolution, dex_creation_data, which_garc = 'evolution')
+    levelup_info = garc_parser(levelup, dex_creation_data, which_garc = 'levelup')
+    eggmov_info = garc_parser(eggmov, dex_creation_data, which_garc = 'eggmov')
+    mega_info = garc_parser(mega, dex_creation_data, which_garc = 'mega')
+ 
+    output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, [])
 
     with open(dex_database_output_path, "r+b") as file_dex:
         with mmap.mmap(file_dex.fileno(), length = 0, access=mmap.ACCESS_WRITE) as dex:
             dex.flush()
+
+
+def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex = 1, current_forme = 0, forme_count = 0, pers_pointer = 1, egg_pointer = 1):
+    
             
-            #will track Pokemon by [nat dex, forme number, personal index]
-            pokemon_index_current = [0, 0, 0]
+    #personal, evolution, levelup, are by personal file index and exist for all
+    crnt_personal = personal_info[pers_pointer]
+    crnt_evolution = evolution_info[pers_pointer]
+    crnt_levelup = levelup_info[pers_pointer]
+                
+    #megas only exist for forme 0
+    if(current_forme == 0):
+        crnt_mega = mega_info[pers_pointer]
+                
+    if(egg_pointer != 0):
+        crnt_eggmov = eggmov_info[egg_pointer]
+    
+
+
+
+
+
+
+
+    if(forme_pointer != 0):
+        if(current_forme < forme_count):
+            #set up egg pointer for alternate forme:
+            if(current_forme == 0):
+                if(dex_creation_data.game in {'SM', 'USUM'}):
+                    temp_egg_pointer = crnt_eggmov[0] + crnt_eggmov[1]*256
+                else:
+                    temp_egg_pointer = 0
+    
+            output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer)
+    #personal info has length total personal files + 1.
+    #move to next species        
+    elif(pers_pointer + 1 < len(personal_info)):
+        output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, output_array, nat_dex + 1, 0, 0, nat_dex + 1, nat_dex + 1)
+        
+
+    return(output_array)
