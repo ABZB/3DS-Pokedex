@@ -7,9 +7,13 @@ from utilities import *
 
 
 def gen_vi_egg_garc_handling(garc_info, dex_creation_data):
-    pass
-
-
+    file_list = os.listdir(dex_creation_data.extracted_egg_moves_folder_path)
+    output_file = [[0]]
+    for x in file_list:
+        with open(x, 'rb') as f:
+            hexdata = f.read()
+            output_file.append(hexdata)
+    return(output_file)
 
 
 #returns list where the kth element is the kth data block of the GARC
@@ -17,11 +21,11 @@ def gen_vi_egg_garc_handling(garc_info, dex_creation_data):
 #for XY/ORAS, calls a different function for Egg
 def garc_parser(garc_info, dex_creation_data, which_garc = ''):
     
+    if(which_garc == 'eggmov' and dex_creation_data.game in {'XY', 'ORAS'}):
+        return(gen_vi_egg_garc_handling(garc_info, dex_creation_data))
+    
     #since the 0th entry is never used, just make it a single 0 entry to keep everything in line
     output_file = [[0]]
-    
-    if(which_garc == 'eggmov' and dex_creation_data.game in {'XY', 'ORAS'}):
-        return(gen_vi_egg_garc_handling(garc_info))
 
     with open(garc_info.path, 'rb') as f:
         hexdata = f.read()
@@ -222,8 +226,17 @@ def create_pokedex_database(dex_creation_data):
             
 
     
-
-
+    personal = GARC_file_info()
+    evolution = GARC_file_info()
+    levelup = GARC_file_info()
+    eggmov = GARC_file_info()
+    mega = GARC_file_info()
+    
+    prsnl_info = garc_parser(personal, dex_creation_data, which_garc = 'personal')
+    vltn_info = garc_parser(evolution, dex_creation_data, which_garc = 'evolution')
+    lvlp_info = garc_parser(levelup, dex_creation_data, which_garc = 'levelup')
+    ggmv_info = garc_parser(eggmov, dex_creation_data, which_garc = 'eggmov')
+    mg_info = garc_parser(mega, dex_creation_data, which_garc = 'mega')
     
 
     #select database for output
