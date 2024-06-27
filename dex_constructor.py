@@ -105,14 +105,152 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
                 break
     return(output_file)
 
+def evolution_array_builder(crnt_evolution, cur, dex_creation_data, current_forme):
+    output_array = []
+    
+    #append method
+    output_array.append(crnt_evolution[cur + 0])
+    #append species
+    output_array.append(crnt_evolution[cur + 4])
+    output_array.append(crnt_evolution[cur + 5])
+            
+    #append forme
+            
+    #in gen VI, forme is not changed unless method is 0x22 (sets to forme 1)
+    if(dex_creation_data.game in {'XY', 'ORAS'}):
+        if(crnt_evolution[cur + 0] == 0x22):
+            output_array.append(0x1)
+        else:
+            output_array.append(current_forme)
+    else:
+        output_array.append(crnt_evolution[cur + 6])
+                
+    #this holds the Item, Move, or Type for evolution methods that use that. In XYORAS, this is incompatible with level-up as that uses the same byte
+    if(dex_creation_data.game in {'XY', 'ORAS'}):
+        if(crnt_evolution[cur + 0] in {1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16, 28, 32, 33, 34}):
+            #parameter does not exist
+            output_array.append(0)
+            output_array.append(0)
+            #level
+            output_array.append(crnt_evolution[cur + 2])
+        else:
+            #other parameter
+            output_array.append(crnt_evolution[cur + 2])
+            output_array.append(crnt_evolution[cur + 3])
+            #level
+            output_array.append(0)
+            
+    #SMUSUM
+    else:
+        #other parameter
+        output_array.append(crnt_evolution[cur + 2])
+        output_array.append(crnt_evolution[cur + 3])
+        #Level
+        output_array.append(crnt_evolution[cur + 7])
+        
+    return(output_array)
+
+def source_evolution_array_builder(crnt_evolution, cur, dex_creation_data, source_nat_dex, source_personal_forme):
+    output_array = []
+    
+    #append method
+    output_array.append(crnt_evolution[cur + 0])
+    #append species
+    species_temp = little_endian_chunks(source_nat_dex)
+    output_array.append(species_temp[0])
+    output_array.append(species_temp[1])
 
 
+    #append forme
+    output_array.append(source_personal_forme)
+        
+    #this holds the Item, Move, or Type for evolution methods that use that. In XYORAS, this is incompatible with level-up as that uses the same byte
+    if(dex_creation_data.game in {'XY', 'ORAS'}):
+        if(crnt_evolution[cur + 0] in {1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16, 28, 32, 33, 34}):
+            #parameter does not exist
+            output_array.append(0)
+            output_array.append(0)
+            #level
+            output_array.append(crnt_evolution[cur + 2])
+        else:
+            #other parameter
+            output_array.append(crnt_evolution[cur + 2])
+            output_array.append(crnt_evolution[cur + 3])
+            #level
+            output_array.append(0)
+            
+    #SMUSUM
+    else:
+        #other parameter
+        output_array.append(crnt_evolution[cur + 2])
+        output_array.append(crnt_evolution[cur + 3])
+        #Level
+        output_array.append(crnt_evolution[cur + 7])
+        
+    return(output_array)
+
+def find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_data, evo_block_size, personal_info):
+    list_pre_evolutions = []
+    
+    #in USUM, eight slots, each of eight bytes
+    #0x0 - Evolution type
+    #0x1 - unused
+    #0x2 - other parameter low byte
+    #0x3 - other parameter high byte
+    #0x4 - target species low byte
+    #0x5 - target species high byte
+    #0x6 - Target forme (FF is preserve current)
+    #0x7 - Level (0 is "NA")
+    
+    for pers_pointer, evotable in enumerate(evolution_info):
+        #need to figure out what the current personal forme is (of the pokemon we are checking to see if it evolves from)
+        pers_forme_pointer = personal_info[pers_pointer][0x1c] + 256*personal_info[pers_pointer][0x1d]
+        #if the forme pointer is 0 or pers pointer is less than forme pointer, we are at forme 0. Also, in this case we are the nat dex number
+        if(pers_forme_pointer == 0 or pers_pointer < pers_forme_pointer):
+            pers_forme = 0
+            source_nat_dex = pers_pointer
+        #pers_pointer is bigger than or equal to the forme pointer. Then pers_pointer - forme_pointer is 0 if forme is 1, 1 if 2, etc. Also, we need to search for the nat dex    
+        else:
+            pers_forme = pers_pointer - pers_forme_pointer + 1
+            for x, pers_table in enumerate(personal_info):
+                if(pers_table[0x1c] + 256*pers_table[0x1d] == pers_forme_pointer):
+                    source_nat_dex = x
+            
+        
+
+        evolution_count = 0
+        while True:
+            cur = evo_block_size*evolution_count
+        
+            if(cur >= len(evotable)):
+                break
+            #if this is 0, this evolution is disabled and the evolution list has ended
+            elif(evotable[cur] == 0):
+                break
+        
+            if(evotable[cur + 4] + 256*evotable[cur + 5] == nat_dex):
+                #for forme to match, cases are:
+                #XYORAS - either matching source personal file has same forme, or current_forme is 1 and evolution method is 0x22
+                #SMUSUM - either matching source personal file has same forme and byte 0x6 is FF or byte 0x6 == current_forme
+
+                if(dex_creation_data.game in {'XY', 'ORAS'}):
+                    if(current_forme == pers_forme or (current_forme == 1 and evotable[0] == 0x22)):
+                        list_pre_evolutions.append(source_evolution_array_builder(evotable, cur, dex_creation_data, source_nat_dex, pers_forme))
+                else:
+                    if((current_forme == pers_forme and evotable[cur + 6] == 0xFF) or (evotable[cur + 6] == current_forme)):
+                        list_pre_evolutions.append(temp = source_evolution_array_builder(evotable, cur, dex_creation_data, source_nat_dex, pers_forme))
+            evolution_count += 1
+    return(list_pre_evolutions)
+                        
+        
+        
+        
 
 
 def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex = 1, current_forme = 0, forme_count = 0, pers_pointer = 1, egg_pointer = 1):
     print('Now compiling data on: ', nat_dex, current_forme)
     #this will hold the data for this Pokemon
-    output_array = [0]*64
+    output_array = [0]*75
             
     #personal, evolution, levelup, are by personal file index and exist for all
     crnt_personal = personal_info[pers_pointer]
@@ -179,55 +317,64 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         elif(crnt_evolution[cur] == 0):
             break
         else:
-            #append method
-            output_array.append(crnt_evolution[cur + 0])
-            #append species
-            output_array.append(crnt_evolution[cur + 4])
-            output_array.append(crnt_evolution[cur + 5])
+            temp = evolution_array_builder(crnt_evolution, cur, dex_creation_data, current_forme)
             
-            #append forme
-            
-            #in gen VI, forme is not changed unless method is 0x22 (sets to forme 1)
-            if(dex_creation_data.game in {'XY', 'ORAS'}):
-                if(crnt_evolution[cur + 0] == 0x22):
-                    output_array.append(0x1)
-                else:
-                    output_array.append(current_forme)
-            else:
-                output_array.append(crnt_evolution[cur + 6])
+            for x in temp:
+                output_array.append(x)
                 
-            #this holds the Item, Move, or Type for evolution methods that use that. In XYORAS, this is incompatible with level-up as that uses the same byte
-            if(dex_creation_data.game in {'XY', 'ORAS'}):
-                if(crnt_evolution[cur + 0] in {1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16, 28, 32, 33, 34}):
-                    #parameter does not exist
-                    output_array.append(0)
-                    output_array.append(0)
-                    #level
-                    output_array.append(crnt_evolution[cur + 2])
-                else:
-                    #other parameter
-                    output_array.append(crnt_evolution[cur + 2])
-                    output_array.append(crnt_evolution[cur + 3])
-                    #level
-                    output_array.append(0)
-            
-            #SMUSUM
-            else:
-                #other parameter
-                output_array.append(crnt_evolution[cur + 2])
-                output_array.append(crnt_evolution[cur + 3])
-                #Level
-                output_array.append(crnt_evolution[cur + 7])
-
         evolution_count += 1
-                
-                
-                
-            
-        
     output_array[1] = evolution_count
-        
+    
 
+    #now need to find all the places where a Pokemon evolves into this one
+    temp_pre_evolutions = find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_data, evo_block_size, personal_info)
+    output_array[2] = len(temp_pre_evolutions)/7
+    for x in temp_pre_evolutions:
+        output_array.append(x)
+
+    #set nat dex, forme, and personal pointer
+    output_array[5], output_array[6] = little_endian_chunks(nat_dex)
+    output_array[7] = current_forme
+    output_array[8], output_array[9] = little_endian_chunks(pers_pointer)
+
+    #stats
+    output_array[10] = crnt_personal[0]
+    output_array[11] = crnt_personal[1]
+    output_array[12] = crnt_personal[2]
+    output_array[13] = crnt_personal[4]
+    output_array[14] = crnt_personal[5]
+    output_array[15] = crnt_personal[3]
+
+    #Types and base catch rate
+    output_array[16] = crnt_personal[6]
+    output_array[17] = crnt_personal[7]
+    output_array[18] = crnt_personal[8]
+    
+
+
+    #wild hold items, gender, hatch cycles, friendship, exp curve, egg groups, abilites, flee rate
+    for offset in range(16):
+        output_array[25 + offset] = crnt_personal[0xc + offset]
+
+    #base_exp
+    output_array[41] = crnt_personal[0x22]
+    output_array[42] = crnt_personal[0x23]
+        
+    
+    #height in decimeters
+    output_array[66] = crnt_personal[0x24]
+    output_array[67] = crnt_personal[0x25]
+    
+
+    #mass in decigrams
+    output_array[68] = crnt_personal[0x26]
+    output_array[69] = crnt_personal[0x27]
+
+    #z-crystal, base move, Z-move
+    for offset in range(6):
+        output_array[70 + offset] = crnt_personal[0x4c + offset]
+
+    forme_pointer = crnt_personal[0x1c] + 256*crnt_personal[0x1d]
 
     if(forme_pointer != 0 and current_forme + 1 < forme_count):
         #forme starts from 0, e.g. if no alt formes forme count is 1 and current forme is 0
