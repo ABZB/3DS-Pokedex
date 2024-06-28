@@ -1,4 +1,3 @@
-from msilib import CreateRecord
 from dex_creator_file_loader import *
 from dex_creator_class import *
 from utilities import *
@@ -250,7 +249,7 @@ def find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_dat
 def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex = 1, current_forme = 0, forme_count = 0, pers_pointer = 1, egg_pointer = 1):
     print('Now compiling data on: ', nat_dex, current_forme)
     #this will hold the data for this Pokemon
-    output_array = [0]*75
+    output_array = [0]*77
             
     #personal, evolution, levelup, are by personal file index and exist for all
     crnt_personal = personal_info[pers_pointer]
@@ -260,6 +259,9 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
     #megas only exist for forme 0
     if(current_forme == 0):
         crnt_mega = mega_info[pers_pointer]
+    else:
+        crnt_mega = mega_info[nat_dex]
+        
         
 
     #egg move handling
@@ -352,29 +354,318 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
     
 
 
+    # counting from rightmost bit (first is 1 = 2^0)
+    #EV, byte 1
+    #0	HP 1
+    #1	HP 2
+    #2	ATK 1
+    #3	ATK 2
+    #4	DEF 1
+    #5	DEF 2
+    #6	Spe 1
+    #7	Spe 2
+
+    #EV byte 2
+    #8	SA 1
+    #9	SA 2
+    #10	SD 1
+    #11	SD 2
+    #12	
+    #13	
+    #14	
+    #15	
+
+    #HP
+    output_array[19] = crnt_personal[0xa] & 3
+    #Atk
+    output_array[20] = (crnt_personal[0xa] >> 2) & 3
+    #Def
+    output_array[21] = (crnt_personal[0xa] >> 4) & 3
+    #Spe
+    output_array[24] = (crnt_personal[0xa] >> 6) & 3
+    
+    #SA
+    output_array[22] = crnt_personal[0xb] & 3
+    #SD
+    output_array[23] = (crnt_personal[0xb] >> 2) & 3
+
+
     #wild hold items, gender, hatch cycles, friendship, exp curve, egg groups, abilites, flee rate
     for offset in range(16):
         output_array[25 + offset] = crnt_personal[0xc + offset]
 
+
+    #TM/HM list is immediately followed by tutor list, starting from least bit being TM001
+    for offset in range(13):
+        output_array[46 + offset] = crnt_personal[0x28 + offset]
+
+    #in XYORAS, the last few HMS are in 0x35
+    if(dex_creation_data.game in {'XY', 'ORAS'}):    
+        output_array[59] = crnt_personal[0x35]
+        
+    #the specual tutors (pledges, then elemental supermoves, then Draco Meteor and Dragon Ascent) are in 0x38 for everything
+    output_array[60] = crnt_personal[0x38]
+    
+
+    #XY and SM don't have the nice tutors
+    #ORAS skips a bunch of bytes, need to mess around to normalize it
+    if(dex_creation_data.game == 'ORAS'):
+
+        output_array[61] = crnt_personal[0x40]
+        
+        #0x41 doesn't do anything with the highest bit for some reason. grab the lowest bit of the next byte and shift it to the highest position, this way the list matches up with USUM
+        output_array[62] = crnt_personal[0x41] + ((crnt_personal[0x44] & 0x01) << 7)
+        
+        #so bitshift the remainder down and add it to the highest bit of the next...
+        output_array[63] = (crnt_personal[0x44] >> 1) + ((crnt_personal[0x45] & 0x01) << 7)
+
+        #and again... fortunately, 0x46 only uses the very lowest byte so we're even now
+        output_array[64] = (crnt_personal[0x45] >> 1) + ((crnt_personal[0x46] & 0x01) << 7)
+        
+
+        output_array[65] = crnt_personal[0x48]
+        output_array[66] = crnt_personal[0x49]
+        output_array[67] = crnt_personal[0x4c]
+        output_array[68] = crnt_personal[0x4d]
+
+    elif(dex_creation_data.game == 'USUM'):
+        for offset in range(8):
+            output_array[61 + offset] = crnt_personal[0x3c + offset]
+        #only the low nibble of the last byte
+        output_array[66] = crnt_personal[0x44] & 0x0F
+
     #base_exp
-    output_array[41] = crnt_personal[0x22]
-    output_array[42] = crnt_personal[0x23]
+    output_array[44] = crnt_personal[0x22]
+    output_array[45] = crnt_personal[0x23]
         
     
     #height in decimeters
-    output_array[66] = crnt_personal[0x24]
-    output_array[67] = crnt_personal[0x25]
+    output_array[69] = crnt_personal[0x24]
+    output_array[70] = crnt_personal[0x25]
     
 
     #mass in decigrams
-    output_array[68] = crnt_personal[0x26]
-    output_array[69] = crnt_personal[0x27]
+    output_array[71] = crnt_personal[0x26]
+    output_array[72] = crnt_personal[0x27]
 
+    
     #z-crystal, base move, Z-move
-    for offset in range(6):
-        output_array[70 + offset] = crnt_personal[0x4c + offset]
+    if(dex_creation_data.game in {'SM', 'USUM'}):
+        for offset in range(6):
+            output_array[73 + offset] = crnt_personal[0x4c + offset]
+
 
     forme_pointer = crnt_personal[0x1c] + 256*crnt_personal[0x1d]
+    
+
+
+    if(forme_pointer != 0):
+        #don't list in order. First do Mega, then Ultra, then Ability/special (Meloetta, Aegislash, Greninja, Castform, Wishiwashi, Darmanitan), then all others
+
+
+        # forme reference:
+        # 0 = Mega (reference item)
+        # 1 = Ultra  (reference z-crystal)
+        # 2 = Transformed by Move (reference move)
+        # 3 = Transformed by Ability (reference ability)
+        # 4 = Transformed by held item (out of battle)
+        # 5 = Variant Forme
+        # 6 = Base Forme
+    
+        mega = 0
+        ultra = 1
+        transformed_move = 2
+        transformed_ability = 3
+        transformed_held_item = 4
+        variant_forme = 5
+        base_forme = 6
+        fused_forme = 7
+        
+        # forme, method, needed thing
+        done_forme_array = []
+        for offset in range(len(crnt_mega)/8):
+            if(crnt_mega[offset*8 + 3] != 0x00):
+                
+                #base forme if current is a mega forme
+                if(current_forme == crnt_mega[offset*8]):
+                    output_array[3] += 1
+                    output_array.append(0)
+                    done_forme_array.append(0)
+                    output_array.append(base_forme)
+                    output_array.append(crnt_mega[offset*8 + 5])
+                    output_array.append(crnt_mega[offset*8 + 6])  
+                #alternate mega or all mega if base forme
+                else:
+                    output_array[3] += 1
+                    output_array.append(crnt_mega[offset*8])
+                    done_forme_array.append(crnt_mega[offset*8])
+                    output_array.append(mega)
+                    output_array.append(crnt_mega[offset*8 + 5])
+                    output_array.append(crnt_mega[offset*8 + 6])
+
+        #for Ultra, need to check forme 3 for having Ultranecrozium Z (923) in the z-crystal slot
+        #will update when more generalized version is achieved
+        #forme_pointer is the file for forme 1, so 2 after is our target
+        if(forme_count >= 3):         
+            if(923 == personal_info[forme_pointer + 2][0x4c] + 256*personal_info[forme_pointer + 2][0x4d]):
+                if(current_forme != 3):
+                    output_array[3] += 1
+                    output_array.append(3)
+                    done_forme_array.append(3)
+                    output_array.append(ultra)
+                    output_array.append(personal_info[forme_pointer + 2][0x4c])
+                    output_array.append(personal_info[forme_pointer + 2][0x4d])
+                #is the Ultra forme
+                else:
+                    for x in range(3):
+                        output_array[3] += 1
+                        output_array.append(x)
+                        done_forme_array.append(x)
+                        output_array.append(base_forme)
+                        output_array.append(personal_info[forme_pointer + 2][0x4c])
+                        output_array.append(personal_info[forme_pointer + 2][0x4d])
+                    
+
+        #just Meloetta
+        if(nat_dex == 648):
+                output_array[3] += 1
+                output_array.append(1 - current_forme)
+                done_forme_array.append(1 - current_forme)
+                output_array.append(transformed_move)
+                output_array.append(0x23)
+                output_array.append(0x02)
+        
+        #Ability
+        # Forecast, Flower Gift, Zen mode, Stance Change, Shields Down, Schooling, Disguise, Battle Bond, Power Construct        
+        #59, 122, 161, 176, 197, 208, 209, 210, 211
+        ability_list = {crnt_personal[0x18], crnt_personal[0x19], crnt_personal[0x1A]}
+        
+        base_ability_list = {personal_info[nat_dex][0x18], personal_info[nat_dex][0x19], personal_info[nat_dex][0x1A]}
+        
+        if(59 in ability_list or 59 in base_ability_list):
+                for x in range(4):
+                    if(x != current_forme):
+                        output_array[3] += 1
+                        output_array.append(x)
+                        done_forme_array.append(x)
+                        output_array.append(transformed_ability)
+                        output_array.append(59)
+                        output_array.append(0x00)
+                
+        elif(122 in ability_list or 122 in base_ability_list):
+                for x in range(2):
+                    if(x != current_forme):
+                        output_array[3] += 1
+                        output_array.append(x)
+                        done_forme_array.append(x)
+                        output_array.append(transformed_ability)
+                        output_array.append(122)
+                        output_array.append(0x00)
+                
+        elif(161 in ability_list or 161 in base_ability_list):
+                for x in range(2):
+                    if(x != current_forme):
+                        output_array[3] += 1
+                        output_array.append(x)
+                        done_forme_array.append(x)
+                        output_array.append(transformed_ability)
+                        output_array.append(161)
+                        output_array.append(0x00)
+                
+        elif(176 in ability_list or 176 in base_ability_list):
+                for x in range(2):
+                    if(x != current_forme):
+                        output_array[3] += 1
+                        output_array.append(x)
+                        done_forme_array.append(x)
+                        output_array.append(transformed_ability)
+                        output_array.append(176)
+                        output_array.append(0x00)
+                
+        elif(197 in ability_list):
+                output_array[3] += 1
+                #Shields up forme    
+                if(current_forme <= 6):
+                    output_array.append(current_forme + 7)
+                    done_forme_array.append(current_forme + 7)
+                else:
+                    output_array.append(current_forme - 7)
+                    done_forme_array.append(current_forme - 7)
+                    
+                output_array.append(transformed_ability)
+                output_array.append(197)
+                output_array.append(0x00)
+                
+        elif(208 in ability_list or 208 in base_ability_list):
+                for x in range(2):
+                    if(x != current_forme):
+                        output_array[3] += 1
+                        output_array.append(x)
+                        done_forme_array.append(x)
+                        output_array.append(transformed_ability)
+                        output_array.append(208)
+                        output_array.append(0x00)
+                
+        elif(209 in ability_list or 209 in base_ability_list):
+                output_array[3] += 1
+                if(current_forme in {0, 2}):
+                    output_array.append(current_forme + 1)
+                    done_forme_array.append(current_forme + 1)
+                    output_array.append(transformed_ability)
+                else:
+                    output_array.append(current_forme - 1)
+                    done_forme_array.append(current_forme - 1)
+                    output_array.append(base_forme)
+                output_array.append(209)
+                output_array.append(0x00)
+                
+        elif(210 in ability_list or 210 in {personal_info[pers_pointer + 0][0x18], personal_info[pers_pointer + 0][0x19], personal_info[pers_pointer + 0][0x1A]}):
+                output_array[3] += 1
+                if(current_forme == 1):
+                    output_array.append(2)
+                    done_forme_array.append(2)
+                elif(current_forme == 2):
+                    output_array.append(1)
+                    done_forme_array.append(1)
+                output_array.append(transformed_ability)
+                output_array.append(210)
+                output_array.append(0x00)
+                
+        elif(211 in ability_list or 210 in {personal_info[pers_pointer + 2][0x18], personal_info[pers_pointer + 2][0x19], personal_info[pers_pointer + 2][0x1A], personal_info[pers_pointer + 3][0x18], personal_info[pers_pointer + 3][0x19], personal_info[pers_pointer + 3][0x1A]}):
+                if(current_forme in {2, 3}):
+                    output_array[3] += 1
+                    output_array.append(4)
+                    done_forme_array.append(4)
+                    output_array.append(transformed_ability)
+                    output_array.append(210)
+                    output_array.append(0x00)
+                elif(current_forme == 4):
+                    output_array[3] += 1
+                    output_array.append(2)
+                    done_forme_array.append(2)
+                    output_array.append(base_forme)
+                    output_array.append(210)
+                    output_array.append(0x00)
+                    output_array[3] += 1
+                    output_array.append(3)
+                    done_forme_array.append(3)
+                    output_array.append(base_forme)
+                    output_array.append(210)
+                    output_array.append(0x00)
+            
+
+
+
+        transformed_held_item = 4
+        variant_forme = 5
+        base_forme = 6
+        fused_forme = 7
+
+
+
+
+
+
 
     if(forme_pointer != 0 and current_forme + 1 < forme_count):
         #forme starts from 0, e.g. if no alt formes forme count is 1 and current forme is 0
