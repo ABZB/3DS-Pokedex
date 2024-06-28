@@ -266,14 +266,14 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             case 252:
                 print('Compiling Hoennian data')
             case 387:
-                print('Compiling Sinnohan data')
+                print('Compiling Sinnoan data')
             case 494:
                 print('Compiling Unovan data')
             case 650:
                 print('Compiling Kalosian data')
             case 722:
                 print('Compiling Alolan data')
-    print('Compiling data on species', nat_dex, current_forme)
+    #print('Compiling data on species', nat_dex, current_forme)
     
     #this will hold the data for this Pokemon
     output_array = [0]*80
@@ -971,11 +971,12 @@ def create_pokedex_database(dex_creation_data):
     output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, int(evolution.blocksize/8), max_nat_dex)
     sys.setrecursionlimit(default_limit)
     
+    print('\nWriting database')
 
     with open(dex_database_output_path, "r+b") as file_dex:
         for x in output_array:
             file_dex.write(int(x).to_bytes(1, 'little'))
-            
+    print('Pokedex created!')
     return
 
 
