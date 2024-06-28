@@ -5,8 +5,8 @@ from dex_constructor import *
 from utilities import *
 
 
-def create_pokedex_database(dex_creation_data):
-    print('All good so far I hope')
+def compile_dex(dex_creation_data):
+    create_pokedex_database(dex_creation_data)
 
 
 

@@ -1,4 +1,3 @@
-from tkinter import CURRENT
 from dex_creator_file_loader import *
 from dex_creator_class import *
 from utilities import *
@@ -27,7 +26,7 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
     
     #since the 0th entry is never used, just make it a single 0 entry to keep everything in line
     output_file = [[0]]
-
+    print(garc_info.path, which_garc)
     with open(garc_info.path, 'rb') as f:
         hexdata = f.read()
     garc_filesize = len(hexdata)
@@ -35,7 +34,7 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
     #find start of data
     cur = 0    
     while True:
-        if([hexdata[0], hexdata[1], hexdata[2], hexdata[3]] == garc_info.header):
+        if([hexdata[cur + 0], hexdata[cur + 1], hexdata[cur + 2], hexdata[cur + 3]] == garc_info.header):
             cur += garc_info.start
             break
         elif(cur == garc_filesize):
@@ -72,7 +71,7 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
         while True:
             temp = []
             #first read bytes at offsets 2 and 3, because that tells the size of the block
-            block_length = hexdata[cur + 2] + hexdata[cur + 3]*256
+            block_length = hexdata[cur + 2] + 256*hexdata[cur + 3]
 
             #this is the number of egg moves. Each egg move is 2 bytes, plus the 4-byte header
             block_length = 2*block_length + 4
@@ -83,7 +82,16 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
             output_file.append(temp)
             
             cur += block_length
-            if(cur >= garc_filesize):
+            
+            try:
+                #skip the FF FF blocks, they are inconsistently placed. If cur and cur+1 are FF FF, then move 2 ahead
+                if(hexdata[cur + 0] == hexdata[cur + 1] == 0xFF):
+                    cur += 2
+            #end of file
+            except:
+                break
+
+            if(cur >= garc_filesize - 1):
                 break
     elif(which_garc == 'levelup'):
         #Levelup uses terminator block FF FF FF FF
@@ -203,6 +211,8 @@ def find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_dat
     #0x7 - Level (0 is "NA")
     
     for pers_pointer, evotable in enumerate(evolution_info):
+        if(pers_pointer == 0):
+            continue
         #need to figure out what the current personal forme is (of the pokemon we are checking to see if it evolves from)
         pers_forme_pointer = personal_info[pers_pointer][0x1c] + 256*personal_info[pers_pointer][0x1d]
         #if the forme pointer is 0 or pers pointer is less than forme pointer, we are at forme 0. Also, in this case we are the nat dex number
@@ -212,15 +222,17 @@ def find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_dat
         #pers_pointer is bigger than or equal to the forme pointer. Then pers_pointer - forme_pointer is 0 if forme is 1, 1 if 2, etc. Also, we need to search for the nat dex    
         else:
             pers_forme = pers_pointer - pers_forme_pointer + 1
-            for x, pers_table in enumerate(personal_info):
-                if(pers_table[0x1c] + 256*pers_table[0x1d] == pers_forme_pointer):
+            for x in range(len(personal_info)):
+                if(x == 0):
+                    pass
+                elif(personal_info[x][0x1c] + 256*personal_info[x][0x1d] == pers_forme_pointer):
                     source_nat_dex = x
             
         
 
         evolution_count = 0
         while True:
-            cur = evo_block_size*evolution_count
+            cur = int(evo_block_size*evolution_count)
         
             if(cur >= len(evotable)):
                 break
@@ -238,7 +250,7 @@ def find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_dat
                         list_pre_evolutions.append(source_evolution_array_builder(evotable, cur, dex_creation_data, source_nat_dex, pers_forme))
                 else:
                     if((current_forme == pers_forme and evotable[cur + 6] == 0xFF) or (evotable[cur + 6] == current_forme)):
-                        list_pre_evolutions.append(temp = source_evolution_array_builder(evotable, cur, dex_creation_data, source_nat_dex, pers_forme))
+                        list_pre_evolutions.append(source_evolution_array_builder(evotable, cur, dex_creation_data, source_nat_dex, pers_forme))
             evolution_count += 1
     return(list_pre_evolutions)
                         
@@ -312,7 +324,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
     evolution_count = 0
     
     while True:
-        cur = evo_block_size*evolution_count
+        cur = int(evo_block_size*evolution_count)
         
         if(cur >= len(crnt_evolution)):
             break
@@ -457,18 +469,25 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
 
 
     forme_pointer = crnt_personal[0x1c] + 256*crnt_personal[0x1d]
-    if(create_pokedex_database.game in {'SM', 'USUM'}):
+    if(dex_creation_data.game in {'SM', 'USUM'}):
         regional_list = [0]
         
     #get forme count, also make a table of regional formes in SMUSUM
     if(forme_pointer != 0 and current_forme == 0):
         cur = 0
         while True:
-            if(personal_info[forme_pointer + cur][0x1c] + 256*personal_info[forme_pointer + cur][0x1d] == forme_pointer):
-                forme_count += 1
-                regional_list.append(personal_info[forme_pointer + cur][0x52] & 0x01)
-            elif(create_pokedex_database.game in {'SM', 'USUM'}):
-                regional_list.append(0)
+            try:
+                if(personal_info[forme_pointer + cur][0x1c] + 256*personal_info[forme_pointer + cur][0x1d] == forme_pointer):
+                    forme_count += 1
+                    if(dex_creation_data.game in {'SM', 'USUM'}):
+                        regional_list.append(personal_info[forme_pointer + cur][0x52] & 0x01)
+                    else:
+                        regional_list.append(0)
+                else:
+                    break
+            except:
+                break
+            cur += 1
                 
 
 
@@ -497,7 +516,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         
         # forme, method, needed thing
         done_forme_array = []
-        for offset in range(len(crnt_mega)/8):
+        for offset in range(int(len(crnt_mega)/8)):
             if(crnt_mega[offset*8 + 3] != 0x00):
                 
                 #base forme if current is a mega forme
@@ -732,7 +751,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             if(current_forme != forme_number and forme_number not in done_forme_array):
                 output_array[3] += 1
                 output_array.append(forme_number)
-                if(create_pokedex_database.game in {'SM', 'USUM'} and regional_list[forme_number] == 1):
+                if(dex_creation_data.game in {'SM', 'USUM'} and regional_list[forme_number] == 1):
                     output_array.append(regional_forme)
                 else:
                     output_array.append(variant_forme)
@@ -741,7 +760,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
 
     #levelup moves
     #first two bytes move, 3rd byte level
-    for cur in range(len(crnt_levelup)/4):
+    for cur in range(int(len(crnt_levelup)/4)):
         #terminator flag
         if(crnt_levelup[cur + 0] == crnt_levelup[cur + 1] == crnt_levelup[cur + 2] == crnt_levelup[cur + 3] == 0xFF):
             break
@@ -793,129 +812,127 @@ def create_pokedex_database(dex_creation_data):
         print('Cleared old data')
     except:
         print('')
-
-    
+    print(dex_creation_data.rom_folder_path)
+    romfs_path = os.path.join(dex_creation_data.rom_folder_path, 'ExtractedRomFS')
+    print(romfs_path)
     match dex_creation_data.game:
         case "XY":
             #not implemented for XY or ORAS
-            eggmov.path = os.path.join(dex_creation_data.rom_folder_path, "/a/2/1/3")
+            eggmov.path = os.path.join(romfs_path, "a/2/1/3")
             #eggmov.header = 
             #eggmov.start = 
             #eggmov.blocksize = 0x30
             
-            evolution.path = os.path.join(dex_creation_data.rom_folder_path, "/a/2/1/5")
+            evolution.path = os.path.join(romfs_path, "a/2/1/5")
             evolution.header = [0x42, 0x4D, 0x49, 0x46]
             evolution.start = 0x3C
             evolution.blocksize = 0x30
             
-            levelup.path = os.path.join(dex_creation_data.rom_folder_path, "/a/2/1/4")
+            levelup.path = os.path.join(romfs_path, "a/2/1/4")
             levelup.header = [0x42, 0x4D, 0x49, 0x46]
             levelup.start = 0x10
             
-            mega.path = os.path.join(dex_creation_data.rom_folder_path, "/a/2/1/6")
+            mega.path = os.path.join(romfs_path, "a/2/1/6")
             mega.header = [0x42, 0x4D, 0x49, 0x46]
             mega.start = 0x24
             mega.blocksize = 0x18
             
-            personal.path = os.path.join(dex_creation_data.rom_folder_path, "/a/2/1/8")
+            personal.path = os.path.join(romfs_path, "a/2/1/8")
             personal.header = [0x42, 0x4D, 0x49, 0x46]
-            personal.start = 0x4C
+            personal.start = 0x50
             personal.blocksize = 0x50
             
         case "ORAS":
             #not implemented for XY or ORAS
-            eggmov.path = os.path.join(dex_creation_data.rom_folder_path, "/a/1/9/0")
+            eggmov.path = os.path.join(romfs_path, "a/1/9/0")
             #eggmov.header = 
             #eggmov.start = 
             #eggmov.blocksize = 0x30
             
-            evolution.path = os.path.join(dex_creation_data.rom_folder_path, "/a/1/9/2")
+            evolution.path = os.path.join(romfs_path, "a/1/9/2")
             evolution.header = [0x42, 0x4D, 0x49, 0x46]
             evolution.start = 0x3C
             evolution.blocksize = 0x30
             
-            levelup.path = os.path.join(dex_creation_data.rom_folder_path, "/a/1/9/1")
+            levelup.path = os.path.join(romfs_path, "a/1/9/1")
             levelup.header = [0x42, 0x4D, 0x49, 0x46]
             levelup.start = 0x10
             
-            mega.path = os.path.join(dex_creation_data.rom_folder_path, "/a/1/9/3")
+            mega.path = os.path.join(romfs_path, "a/1/9/3")
             mega.header = [0x42, 0x4D, 0x49, 0x46]
             mega.start = 0x24
             mega.blocksize = 0x18
             
-            personal.path = os.path.join(dex_creation_data.rom_folder_path, "/a/1/9/5")
+            personal.path = os.path.join(romfs_path, "a/1/9/5")
             personal.header = [0x42, 0x4D, 0x49, 0x46]
-            personal.start = 0x5C
+            personal.start = 0x60
             personal.blocksize = 0x50
             
         case "SM":
          
-            eggmov.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/2")
+            eggmov.path = os.path.join(romfs_path, "a/0/1/2")
             eggmov.header = [0x42, 0x4D, 0x49, 0x46]
             eggmov.start = 0x10
             
-            evolution.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/4")
+            evolution.path = os.path.join(romfs_path, "a/0/1/4")
             evolution.header = [0x42, 0x4D, 0x49, 0x46]
             evolution.start = 0x4C
             evolution.blocksize = 0x40
             
-            levelup.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/3")
+            levelup.path = os.path.join(romfs_path, "a/0/1/3")
             levelup.header = [0x42, 0x4D, 0x49, 0x46]
             levelup.start = 0x10
             
-            mega.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/5")
+            mega.path = os.path.join(romfs_path, "a/0/1/5")
             mega.header = [0x42, 0x4D, 0x49, 0x46]
             mega.start = 0x1C
             mega.blocksize = 0x10
             
-            personal.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/7")
+            personal.path = os.path.join(romfs_path, "a/0/1/7")
             personal.header = [0x42, 0x4D, 0x49, 0x46]
-            personal.start = 0x5C
+            personal.start = 0x60
             personal.blocksize = 0x54
             
         case "USUM":
-            eggmov.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/2")
+            eggmov.path = os.path.join(romfs_path, "a/0/1/2")
             eggmov.header = [0x42, 0x4D, 0x49, 0x46]
             eggmov.start = 0x10
             
-            evolution.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/4")
+            evolution.path = os.path.join(romfs_path, "a/0/1/4")
             evolution.header = [0x42, 0x4D, 0x49, 0x46]
             evolution.start = 0x4C
             evolution.blocksize = 0x40
             
-            levelup.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/3")
+            levelup.path = os.path.join(romfs_path, "a/0/1/3")
             levelup.header = [0x42, 0x4D, 0x49, 0x46]
             levelup.start = 0x10
             
-            mega.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/5")
+            mega.path = os.path.join(romfs_path, "a/0/1/5")
             mega.header = [0x42, 0x4D, 0x49, 0x46]
             mega.start = 0x1C
             mega.blocksize = 0x10
             
-            personal.path = os.path.join(dex_creation_data.rom_folder_path, "/a/0/1/7")
+            personal.path = os.path.join(romfs_path, "a/0/1/7")
             personal.header = [0x42, 0x4D, 0x49, 0x46]
-            personal.start = 0x5C
+            personal.start = 0x60
             personal.blocksize = 0x54
-            
-
-    
-    personal = GARC_file_info()
-    evolution = GARC_file_info()
-    levelup = GARC_file_info()
-    eggmov = GARC_file_info()
-    mega = GARC_file_info()
     
     personal_info = garc_parser(personal, dex_creation_data, which_garc = 'personal')
     evolution_info = garc_parser(evolution, dex_creation_data, which_garc = 'evolution')
     levelup_info = garc_parser(levelup, dex_creation_data, which_garc = 'levelup')
     eggmov_info = garc_parser(eggmov, dex_creation_data, which_garc = 'eggmov')
     mega_info = garc_parser(mega, dex_creation_data, which_garc = 'mega')
- 
-    output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evolution.blocksize/8)
+    
+
+    print('Loaded World Data')
+
+    output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, int(evolution.blocksize/8))
 
     with open(dex_database_output_path, "r+b") as file_dex:
         for x in output_array:
             file_dex.write(x)
+            
+    return
 
 
 
