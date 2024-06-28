@@ -248,10 +248,10 @@ def find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_dat
 
                 if(dex_creation_data.game in {'XY', 'ORAS'}):
                     if(current_forme == pers_forme or (current_forme == 1 and evotable[0] == 0x22)):
-                        list_pre_evolutions.append(source_evolution_array_builder(evotable, cur, dex_creation_data, source_nat_dex, pers_forme))
+                        list_pre_evolutions = [*list_pre_evolutions, *source_evolution_array_builder(evotable, cur, dex_creation_data, source_nat_dex, pers_forme)]
                 else:
                     if((current_forme == pers_forme and evotable[cur + 6] == 0xFF) or (evotable[cur + 6] == current_forme)):
-                        list_pre_evolutions.append(source_evolution_array_builder(evotable, cur, dex_creation_data, source_nat_dex, pers_forme))
+                        list_pre_evolutions = [*list_pre_evolutions, *source_evolution_array_builder(evotable, cur, dex_creation_data, source_nat_dex, pers_forme)]
             evolution_count += 1
     return(list_pre_evolutions)
                         
@@ -797,7 +797,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             output_array.append(crnt_levelup[cur + 1])
             output_array.append(crnt_levelup[cur + 2])
         cur += 4
-        
+
     if(forme_pointer != 0 and current_forme + 1 < forme_count):
         #forme starts from 0, e.g. if no alt formes forme count is 1 and current forme is 0
         if(egg_pointer != 0):
@@ -812,6 +812,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             temp_egg_pointer = 0
         return([*output_array, *power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, max_nat_dex, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer, regional_list)])
     
+
     #personal info has length total personal files + 1.
     #move to next species        
     elif(pers_pointer < max_nat_dex):
