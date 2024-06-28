@@ -1,3 +1,4 @@
+from tkinter import CURRENT
 from dex_creator_file_loader import *
 from dex_creator_class import *
 from utilities import *
@@ -246,10 +247,10 @@ def find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_dat
         
 
 
-def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex = 1, current_forme = 0, forme_count = 0, pers_pointer = 1, egg_pointer = 1):
+def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex = 1, current_forme = 0, forme_count = 1, pers_pointer = 1, egg_pointer = 1, regional_list = []):
     print('Now compiling data on: ', nat_dex, current_forme)
     #this will hold the data for this Pokemon
-    output_array = [0]*77
+    output_array = [0]*80
             
     #personal, evolution, levelup, are by personal file index and exist for all
     crnt_personal = personal_info[pers_pointer]
@@ -432,7 +433,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         for offset in range(8):
             output_array[61 + offset] = crnt_personal[0x3c + offset]
         #only the low nibble of the last byte
-        output_array[66] = crnt_personal[0x44] & 0x0F
+        output_array[69] = crnt_personal[0x44] & 0x0F
 
     #base_exp
     output_array[44] = crnt_personal[0x22]
@@ -440,23 +441,35 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         
     
     #height in decimeters
-    output_array[69] = crnt_personal[0x24]
-    output_array[70] = crnt_personal[0x25]
+    output_array[70] = crnt_personal[0x24]
+    output_array[71] = crnt_personal[0x25]
     
 
     #mass in decigrams
-    output_array[71] = crnt_personal[0x26]
-    output_array[72] = crnt_personal[0x27]
+    output_array[72] = crnt_personal[0x26]
+    output_array[73] = crnt_personal[0x27]
 
     
     #z-crystal, base move, Z-move
     if(dex_creation_data.game in {'SM', 'USUM'}):
         for offset in range(6):
-            output_array[73 + offset] = crnt_personal[0x4c + offset]
+            output_array[74 + offset] = crnt_personal[0x4c + offset]
 
 
     forme_pointer = crnt_personal[0x1c] + 256*crnt_personal[0x1d]
-    
+    if(create_pokedex_database.game in {'SM', 'USUM'}):
+        regional_list = [0]
+        
+    #get forme count, also make a table of regional formes in SMUSUM
+    if(forme_pointer != 0 and current_forme == 0):
+        cur = 0
+        while True:
+            if(personal_info[forme_pointer + cur][0x1c] + 256*personal_info[forme_pointer + cur][0x1d] == forme_pointer):
+                forme_count += 1
+                regional_list.append(personal_info[forme_pointer + cur][0x52] & 0x01)
+            elif(create_pokedex_database.game in {'SM', 'USUM'}):
+                regional_list.append(0)
+                
 
 
     if(forme_pointer != 0):
@@ -480,6 +493,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         variant_forme = 5
         base_forme = 6
         fused_forme = 7
+        regional_forme = 8
         
         # forme, method, needed thing
         done_forme_array = []
@@ -506,7 +520,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         #for Ultra, need to check forme 3 for having Ultranecrozium Z (923) in the z-crystal slot
         #will update when more generalized version is achieved
         #forme_pointer is the file for forme 1, so 2 after is our target
-        if(forme_count >= 3):         
+        if(forme_count > 3):         
             if(923 == personal_info[forme_pointer + 2][0x4c] + 256*personal_info[forme_pointer + 2][0x4d]):
                 if(current_forme != 3):
                     output_array[3] += 1
@@ -653,19 +667,89 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                     output_array.append(210)
                     output_array.append(0x00)
             
+        #just Giratina Origin
+        if(nat_dex == 487):
+            if(current_forme <= 1):
+                output_array[3] += 1
+                output_array.append(1 - current_forme)
+                done_forme_array.append(1 - current_forme)
+                output_array.append(transformed_held_item)
+                output_array.append(112)
+                output_array.append(0x00)
 
+        #Kyurem and Necrozma
+        if(nat_dex in {648, 800} and current_forme <= 2):
+            #forme 1 or forme 2 looking at forme 0
+            if(current_forme in {1, 2} and 0 not in done_forme_array):
+                output_array[3] += 1
+                output_array.append(0)
+                done_forme_array.append(0)
+                output_array.append(base_forme)
+                
+                #call the Pokemon to be fused or defused with (current forme is 1 or 2. Forme one matches the first nat dex fusion, so 1-1, second is one after so 2-1)
+                if(nat_dex == 648):
+                    output_array.append(0x83 + current_forme - 1)
+                    output_array.append(0x02)
+                else:
+                    output_array.append(0x17 + current_forme - 1)
+                    output_array.append(0x03)
 
+            #base forme or forme 2 looking at forme 1
+            if(current_forme in {0, 2} and 1 not in done_forme_array):
+                output_array[3] += 1
+                output_array.append(1)
+                done_forme_array.append(1)
+                output_array.append(fused_forme)
+                
+                #call the Pokemon to be fused or defused with
+                if(nat_dex == 648):
+                    output_array.append(0x83)
+                    output_array.append(0x02)
+                else:
+                    output_array.append(0x17)
+                    output_array.append(0x03)
+                    
+            #base forme or forme 1 looking at forme 2
+            if(current_forme in {0,1} and 2 not in done_forme_array):
+                output_array[3] += 1
+                output_array.append(2)
+                done_forme_array.append(2)
+                output_array.append(fused_forme)
+                
+                #call the Pokemon to be fused or defused with
+                if(nat_dex == 648):
+                    output_array.append(0x84)
+                    output_array.append(0x02)
+                else:
+                    output_array.append(0x18)
+                    output_array.append(0x03)
+                
+                
+        #handle all other variant formes
+        regional_list
+        
+        for forme_number in range(forme_count):
+            if(current_forme != forme_number and forme_number not in done_forme_array):
+                output_array[3] += 1
+                output_array.append(forme_number)
+                if(create_pokedex_database.game in {'SM', 'USUM'} and regional_list[forme_number] == 1):
+                    output_array.append(regional_forme)
+                else:
+                    output_array.append(variant_forme)
+                output_array.append(0x00)
+                output_array.append(0x00)
 
-        transformed_held_item = 4
-        variant_forme = 5
-        base_forme = 6
-        fused_forme = 7
-
-
-
-
-
-
+    #levelup moves
+    #first two bytes move, 3rd byte level
+    for cur in range(len(crnt_levelup)/4):
+        #terminator flag
+        if(crnt_levelup[cur + 0] == crnt_levelup[cur + 1] == crnt_levelup[cur + 2] == crnt_levelup[cur + 3] == 0xFF):
+            break
+        else:
+            output_array[4] += 1
+            output_array.append(crnt_levelup[cur + 0])
+            output_array.append(crnt_levelup[cur + 1])
+            output_array.append(crnt_levelup[cur + 2])
 
     if(forme_pointer != 0 and current_forme + 1 < forme_count):
         #forme starts from 0, e.g. if no alt formes forme count is 1 and current forme is 0
