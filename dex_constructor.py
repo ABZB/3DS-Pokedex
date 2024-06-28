@@ -310,12 +310,12 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             #egg moves
             #first byte is count of egg moves, second empty
             if(dex_creation_data.game in {'XY', 'ORAS'}):
-                output_array[0] = crnt_eggmov[0]
+                output_array[5] = crnt_eggmov[0]
                 for x in range(2,len(crnt_eggmov)):
                     output_array.append(x)
             #first two bytes are the pointer to alt forme egg move (or self if no alt forme), next two same as XY/ORAS
             else:
-                output_array[0] = crnt_eggmov[2]
+                output_array[5] = crnt_eggmov[2]
                 for x in range(4,len(crnt_eggmov)):
                     output_array.append(crnt_eggmov[x])
         
@@ -357,19 +357,19 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                 output_array.append(x)
                 
         evolution_count += 1
-    output_array[1] = evolution_count
+    output_array[6] = evolution_count
     
 
     #now need to find all the places where a Pokemon evolves into this one
     temp_pre_evolutions = find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_data, evo_block_size, personal_info)
-    output_array[2] = len(temp_pre_evolutions)/7
+    output_array[7] = len(temp_pre_evolutions)/7
     for x in temp_pre_evolutions:
         output_array.append(x)
 
     #set nat dex, forme, and personal pointer
-    output_array[5], output_array[6] = little_endian_chunks(nat_dex)
-    output_array[7] = current_forme
-    output_array[8], output_array[9] = little_endian_chunks(pers_pointer)
+    output_array[0], output_array[1] = little_endian_chunks(nat_dex)
+    output_array[2] = current_forme
+    output_array[3], output_array[4] = little_endian_chunks(pers_pointer)
 
     #stats
     output_array[10] = crnt_personal[0]
@@ -546,7 +546,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                 
                 #base forme if current is a mega forme
                 if(current_forme == crnt_mega[offset*8]):
-                    output_array[3] += 1
+                    output_array[8] += 1
                     output_array.append(0)
                     done_forme_array.append(0)
                     output_array.append(base_forme)
@@ -554,7 +554,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                     output_array.append(crnt_mega[offset*8 + 6])  
                 #alternate mega or all mega if base forme
                 else:
-                    output_array[3] += 1
+                    output_array[8] += 1
                     output_array.append(crnt_mega[offset*8])
                     done_forme_array.append(crnt_mega[offset*8])
                     output_array.append(mega)
@@ -567,7 +567,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         if(forme_count > 3):
             if(923 == personal_info[forme_pointer + 2][0x4c] + 256*personal_info[forme_pointer + 2][0x4d]):
                 if(current_forme != 3):
-                    output_array[3] += 1
+                    output_array[8] += 1
                     output_array.append(3)
                     done_forme_array.append(3)
                     output_array.append(ultra)
@@ -576,7 +576,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                 #is the Ultra forme
                 else:
                     for x in range(3):
-                        output_array[3] += 1
+                        output_array[8] += 1
                         output_array.append(x)
                         done_forme_array.append(x)
                         output_array.append(base_forme)
@@ -586,7 +586,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
 
         #just Meloetta
         if(nat_dex == 648):
-                output_array[3] += 1
+                output_array[8] += 1
                 output_array.append(1 - current_forme)
                 done_forme_array.append(1 - current_forme)
                 output_array.append(transformed_move)
@@ -603,7 +603,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         if(59 in ability_list or 59 in base_ability_list):
                 for x in range(4):
                     if(x != current_forme):
-                        output_array[3] += 1
+                        output_array[8] += 1
                         output_array.append(x)
                         done_forme_array.append(x)
                         output_array.append(transformed_ability)
@@ -613,7 +613,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         elif(122 in ability_list or 122 in base_ability_list):
                 for x in range(2):
                     if(x != current_forme):
-                        output_array[3] += 1
+                        output_array[8] += 1
                         output_array.append(x)
                         done_forme_array.append(x)
                         output_array.append(transformed_ability)
@@ -623,7 +623,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         elif(161 in ability_list or 161 in base_ability_list):
                 for x in range(2):
                     if(x != current_forme):
-                        output_array[3] += 1
+                        output_array[8] += 1
                         output_array.append(x)
                         done_forme_array.append(x)
                         output_array.append(transformed_ability)
@@ -633,7 +633,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         elif(176 in ability_list or 176 in base_ability_list):
                 for x in range(2):
                     if(x != current_forme):
-                        output_array[3] += 1
+                        output_array[8] += 1
                         output_array.append(x)
                         done_forme_array.append(x)
                         output_array.append(transformed_ability)
@@ -641,7 +641,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                         output_array.append(0x00)
                 
         elif(197 in ability_list):
-                output_array[3] += 1
+                output_array[8] += 1
                 #Shields up forme    
                 if(current_forme <= 6):
                     output_array.append(current_forme + 7)
@@ -657,7 +657,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         elif(208 in ability_list or 208 in base_ability_list):
                 for x in range(2):
                     if(x != current_forme):
-                        output_array[3] += 1
+                        output_array[8] += 1
                         output_array.append(x)
                         done_forme_array.append(x)
                         output_array.append(transformed_ability)
@@ -665,7 +665,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                         output_array.append(0x00)
                 
         elif(209 in ability_list or 209 in base_ability_list):
-                output_array[3] += 1
+                output_array[8] += 1
                 if(current_forme in {0, 2}):
                     output_array.append(current_forme + 1)
                     done_forme_array.append(current_forme + 1)
@@ -678,7 +678,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                 output_array.append(0x00)
                 
         elif(210 in ability_list or 210 in {personal_info[pers_pointer + 0][0x18], personal_info[pers_pointer + 0][0x19], personal_info[pers_pointer + 0][0x1A]}):
-                output_array[3] += 1
+                output_array[8] += 1
                 if(current_forme == 1):
                     output_array.append(2)
                     done_forme_array.append(2)
@@ -693,20 +693,20 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         elif(nat_dex == 718):
             if(211 in ability_list or 210 in {personal_info[pers_pointer + 2][0x18], personal_info[pers_pointer + 2][0x19], personal_info[pers_pointer + 2][0x1A], personal_info[pers_pointer + 3][0x18], personal_info[pers_pointer + 3][0x19], personal_info[pers_pointer + 3][0x1A]}):
                 if(current_forme in {2, 3}):
-                    output_array[3] += 1
+                    output_array[8] += 1
                     output_array.append(4)
                     done_forme_array.append(4)
                     output_array.append(transformed_ability)
                     output_array.append(210)
                     output_array.append(0x00)
                 elif(current_forme == 4):
-                    output_array[3] += 1
+                    output_array[8] += 1
                     output_array.append(2)
                     done_forme_array.append(2)
                     output_array.append(base_forme)
                     output_array.append(210)
                     output_array.append(0x00)
-                    output_array[3] += 1
+                    output_array[8] += 1
                     output_array.append(3)
                     done_forme_array.append(3)
                     output_array.append(base_forme)
@@ -716,7 +716,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         #just Giratina Origin
         if(nat_dex == 487):
             if(current_forme <= 1):
-                output_array[3] += 1
+                output_array[8] += 1
                 output_array.append(1 - current_forme)
                 done_forme_array.append(1 - current_forme)
                 output_array.append(transformed_held_item)
@@ -727,7 +727,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         if(nat_dex in {648, 800} and current_forme <= 2):
             #forme 1 or forme 2 looking at forme 0
             if(current_forme in {1, 2} and 0 not in done_forme_array):
-                output_array[3] += 1
+                output_array[8] += 1
                 output_array.append(0)
                 done_forme_array.append(0)
                 output_array.append(base_forme)
@@ -742,7 +742,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
 
             #base forme or forme 2 looking at forme 1
             if(current_forme in {0, 2} and 1 not in done_forme_array):
-                output_array[3] += 1
+                output_array[8] += 1
                 output_array.append(1)
                 done_forme_array.append(1)
                 output_array.append(fused_forme)
@@ -757,7 +757,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                     
             #base forme or forme 1 looking at forme 2
             if(current_forme in {0,1} and 2 not in done_forme_array):
-                output_array[3] += 1
+                output_array[8] += 1
                 output_array.append(2)
                 done_forme_array.append(2)
                 output_array.append(fused_forme)
@@ -775,7 +775,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         
         for forme_number in range(forme_count):
             if(current_forme != forme_number and forme_number not in done_forme_array):
-                output_array[3] += 1
+                output_array[8] += 1
                 output_array.append(forme_number)
                 if(dex_creation_data.game in {'SM', 'USUM'} and regional_list[forme_number] == 1):
                     output_array.append(regional_forme)
@@ -795,8 +795,14 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             output_array.append(crnt_levelup[cur + 0])
             output_array.append(crnt_levelup[cur + 1])
             output_array.append(crnt_levelup[cur + 2])
+            
+
+        
     print(output_array)
+    
     return(output_array)
+
+
     if(forme_pointer != 0 and current_forme + 1 < forme_count):
         #forme starts from 0, e.g. if no alt formes forme count is 1 and current forme is 0
         if(egg_pointer != 0):
