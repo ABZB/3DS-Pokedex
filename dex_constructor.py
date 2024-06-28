@@ -797,14 +797,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             output_array.append(crnt_levelup[cur + 1])
             output_array.append(crnt_levelup[cur + 2])
         cur += 4
-            
-
         
-    print(output_array)
-    
-    return(output_array)
-
-
     if(forme_pointer != 0 and current_forme + 1 < forme_count):
         #forme starts from 0, e.g. if no alt formes forme count is 1 and current forme is 0
         if(egg_pointer != 0):
