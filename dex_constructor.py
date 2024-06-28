@@ -317,7 +317,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             else:
                 output_array[0] = crnt_eggmov[2]
                 for x in range(4,len(crnt_eggmov)):
-                    output_array.append(x)
+                    output_array.append(crnt_eggmov[x])
         
             
     #evolves-into handling
