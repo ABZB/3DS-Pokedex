@@ -253,12 +253,7 @@ def find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_dat
                     if((current_forme == pers_forme and evotable[cur + 6] == 0xFF) or (evotable[cur + 6] == current_forme)):
                         list_pre_evolutions = [*list_pre_evolutions, *source_evolution_array_builder(evotable, cur, dex_creation_data, source_nat_dex, pers_forme)]
             evolution_count += 1
-    return(list_pre_evolutions)
-                        
-        
-        
-        
-
+    return(list_pre_evolutions) 
 
 def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, max_nat_dex, nat_dex = 1, current_forme = 0, forme_count = 1, pers_pointer = 1, egg_pointer = 1, regional_list = []):
     
@@ -815,7 +810,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
 
     #personal info has length total personal files + 1.
     #move to next species        
-    elif(pers_pointer < max_nat_dex):
+    elif(nat_dex < max_nat_dex):
         return([*output_array, *power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, max_nat_dex, nat_dex + 1, 0, 1, nat_dex + 1, nat_dex + 1)])
     #reached final pokemon
     else:
@@ -956,16 +951,21 @@ def create_pokedex_database(dex_creation_data):
     
     max_nat_dex = 0
     for personal_pointer, rows in enumerate(personal_info):
+        #first time this should happen is the first alt forme, so max nat dex is 1 less
         try:
-            #former case base species w/ alt formes, latter case no alt formes
-            if(personal_pointer < rows[0x1c] + 256*rows[0x1c] or rows[0x1c] == rows[0x1c] == 0):
-                max_nat_dex += 1
+            if(personal_pointer >= rows[0x1c] + 256*rows[0x1d] and rows[0x1c] + 256*rows[0x1d] != 0x0):
+                max_nat_dex = personal_pointer - 1
+                break
         except:
-            pass
+            if(personal_pointer == 0):
+                pass
+            else:
+                break
+    print('\nLoaded World Data\n')
+    print('Found ' + str(max_nat_dex) + ' species')
+    print('Found ' + str(len(personal_info) - max_nat_dex - 1) + ' variants\n')
 
 
-    print('Loaded World Data')
-    
     default_limit = sys.getrecursionlimit()
     sys.setrecursionlimit(int(2*len(personal_info)))
     output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, int(evolution.blocksize/8), max_nat_dex)
