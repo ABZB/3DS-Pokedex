@@ -786,15 +786,17 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
 
     #levelup moves
     #first two bytes move, 3rd byte level
-    for cur in range(int(len(crnt_levelup)/4)):
-        #terminator flag
-        if(crnt_levelup[cur + 0] == crnt_levelup[cur + 1] == crnt_levelup[cur + 2] == crnt_levelup[cur + 3] == 0xFF):
+    
+    cur = 0
+    while True:
+        if(cur + 2 > len(crnt_levelup)):
             break
         else:
-            output_array[4] += 1
+            output_array[9] += 1
             output_array.append(crnt_levelup[cur + 0])
             output_array.append(crnt_levelup[cur + 1])
             output_array.append(crnt_levelup[cur + 2])
+        cur += 4
             
 
         
