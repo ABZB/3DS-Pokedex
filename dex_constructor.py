@@ -1,7 +1,8 @@
+from tkinter import CURRENT
 from dex_creator_file_loader import *
 from dex_creator_class import *
 from utilities import *
-
+import sys
 
 
 
@@ -259,8 +260,26 @@ def find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_dat
         
 
 
-def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex = 1, current_forme = 0, forme_count = 1, pers_pointer = 1, egg_pointer = 1, regional_list = []):
-    print('Now compiling data on: ', nat_dex, current_forme)
+def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, max_nat_dex, nat_dex = 1, current_forme = 0, forme_count = 1, pers_pointer = 1, egg_pointer = 1, regional_list = []):
+    
+    if(current_forme == 0):
+        match nat_dex:
+            case 1:
+                print('Compiling Kantonian data')
+            case 152:
+                print('Compiling Johtonian data')
+            case 252:
+                print('Compiling Hoennian data')
+            case 387:
+                print('Compiling Sinnohan data')
+            case 494:
+                print('Compiling Unovan data')
+            case 650:
+                print('Compiling Kalosian data')
+            case 722:
+                print('Compiling Alolan data')
+    print('Compiling data on species', nat_dex, current_forme)
+    
     #this will hold the data for this Pokemon
     output_array = [0]*80
             
@@ -403,9 +422,15 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
     output_array[23] = (crnt_personal[0xb] >> 2) & 3
 
 
-    #wild hold items, gender, hatch cycles, friendship, exp curve, egg groups, abilites, flee rate
-    for offset in range(16):
+    #wild hold items, gender, hatch cycles, friendship, exp curve, egg groups, 
+    for offset in range(12):
         output_array[25 + offset] = crnt_personal[0xc + offset]
+    #abilities, flee rate
+    output_array[37] = crnt_personal[0xc + 11 + 1]
+    output_array[39] = crnt_personal[0xc + 11 + 2]
+    output_array[41] = crnt_personal[0xc + 11 + 3]
+    output_array[44] = crnt_personal[0xc + 11 + 4]
+    
 
 
     #TM/HM list is immediately followed by tutor list, starting from least bit being TM001
@@ -469,11 +494,11 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
 
 
     forme_pointer = crnt_personal[0x1c] + 256*crnt_personal[0x1d]
-    if(dex_creation_data.game in {'SM', 'USUM'}):
-        regional_list = [0]
-        
+    
     #get forme count, also make a table of regional formes in SMUSUM
     if(forme_pointer != 0 and current_forme == 0):
+        if(dex_creation_data.game in {'SM', 'USUM'}):
+            regional_list = [0]
         cur = 0
         while True:
             try:
@@ -539,7 +564,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         #for Ultra, need to check forme 3 for having Ultranecrozium Z (923) in the z-crystal slot
         #will update when more generalized version is achieved
         #forme_pointer is the file for forme 1, so 2 after is our target
-        if(forme_count > 3):         
+        if(forme_count > 3):
             if(923 == personal_info[forme_pointer + 2][0x4c] + 256*personal_info[forme_pointer + 2][0x4d]):
                 if(current_forme != 3):
                     output_array[3] += 1
@@ -663,8 +688,10 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                 output_array.append(transformed_ability)
                 output_array.append(210)
                 output_array.append(0x00)
-                
-        elif(211 in ability_list or 210 in {personal_info[pers_pointer + 2][0x18], personal_info[pers_pointer + 2][0x19], personal_info[pers_pointer + 2][0x1A], personal_info[pers_pointer + 3][0x18], personal_info[pers_pointer + 3][0x19], personal_info[pers_pointer + 3][0x1A]}):
+        
+        #zygarde and power construct. wrote it like this to avoid out of index
+        elif(nat_dex == 718):
+            if(211 in ability_list or 210 in {personal_info[pers_pointer + 2][0x18], personal_info[pers_pointer + 2][0x19], personal_info[pers_pointer + 2][0x1A], personal_info[pers_pointer + 3][0x18], personal_info[pers_pointer + 3][0x19], personal_info[pers_pointer + 3][0x1A]}):
                 if(current_forme in {2, 3}):
                     output_array[3] += 1
                     output_array.append(4)
@@ -745,7 +772,6 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                 
                 
         #handle all other variant formes
-        regional_list
         
         for forme_number in range(forme_count):
             if(current_forme != forme_number and forme_number not in done_forme_array):
@@ -769,7 +795,8 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             output_array.append(crnt_levelup[cur + 0])
             output_array.append(crnt_levelup[cur + 1])
             output_array.append(crnt_levelup[cur + 2])
-
+    print(output_array)
+    return(output_array)
     if(forme_pointer != 0 and current_forme + 1 < forme_count):
         #forme starts from 0, e.g. if no alt formes forme count is 1 and current forme is 0
         if(egg_pointer != 0):
@@ -782,15 +809,17 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                 temp_egg_pointer = egg_pointer + 1
         else:
             temp_egg_pointer = 0
-        output_array.append(power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer))
+        return([*output_array, *power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, max_nat_dex, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer, regional_list)])
     
     #personal info has length total personal files + 1.
     #move to next species        
-    elif(pers_pointer + 1 < len(personal_info)):
-        output_array.append(power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex + 1, 0, 0, nat_dex + 1, nat_dex + 1))
-        
+    elif(pers_pointer < max_nat_dex):
+        return([*output_array, *power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, max_nat_dex, nat_dex + 1, 0, 1, nat_dex + 1, nat_dex + 1)])
+    #reached final pokemon
+    else:
+        return(output_array)
 
-    return(output_array)
+
 
 def create_pokedex_database(dex_creation_data):
     
@@ -923,14 +952,27 @@ def create_pokedex_database(dex_creation_data):
     eggmov_info = garc_parser(eggmov, dex_creation_data, which_garc = 'eggmov')
     mega_info = garc_parser(mega, dex_creation_data, which_garc = 'mega')
     
+    max_nat_dex = 0
+    for personal_pointer, rows in enumerate(personal_info):
+        try:
+            #former case base species w/ alt formes, latter case no alt formes
+            if(personal_pointer < rows[0x1c] + 256*rows[0x1c] or rows[0x1c] == rows[0x1c] == 0):
+                max_nat_dex += 1
+        except:
+            pass
+
 
     print('Loaded World Data')
-
-    output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, int(evolution.blocksize/8))
+    
+    default_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(int(2*len(personal_info)))
+    output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, int(evolution.blocksize/8), max_nat_dex)
+    sys.setrecursionlimit(default_limit)
+    
 
     with open(dex_database_output_path, "r+b") as file_dex:
         for x in output_array:
-            file_dex.write(x)
+            file_dex.write(int(x).to_bytes(1, 'little'))
             
     return
 
