@@ -42,6 +42,27 @@ class Dex_creator:
 		self.trainer_classes = [] #first entry is NOT empty
 		self.trainer_names = []
         
+	def pkhex_personal_file(self):
+		match self.game:		
+			case 'XY':	
+				return('personal_xy')
+			case 'ORAS':	
+				return('personal_ao')
+			case 'SM':	
+				return('personal_sm')
+			case 'USUM':	
+				return('personal_uu')
+		   
+	def pkhex_levelup_file(self):
+		match self.game:		
+			case 'XY':	
+				return('lvlmove_xy.pkl')
+			case 'ORAS':	
+				return('lvlmove_ao.pkl')
+			case 'SM':	
+				return('lvlmove_sm.pkl')
+			case 'USUM':	
+				return('lvlmove_uu.pkl')
 
 		#text file locations
 	def gametext_file_number(self, target):

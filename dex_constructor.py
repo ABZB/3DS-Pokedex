@@ -44,7 +44,7 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
         cur += 1
     
     #handling for GARCs with fixed blocksizes is straightforward
-    if(garc_info.blocksize >0):
+    if(garc_info.blocksize > 0):
         #cur is now pointing to the first byte of the first data block
         while True:
             temp = []
@@ -98,13 +98,12 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
         #Levelup uses terminator block FF FF FF FF
         while True:
             temp = []
-            block_size = 0
             
             while True:
                 temp.append(hexdata[cur])
                 cur += 1
-                #next four bytes being FF means we are at the end
-                if(0xFF == hexdata[cur + 1] == hexdata[cur + 2] == hexdata[cur + 3] == hexdata[cur + 4]):
+                #next three bytes being FF means we are at the end
+                if(0xFF == hexdata[cur + 0] == hexdata[cur + 1] == hexdata[cur + 2] == hexdata[cur + 3]):
                     break
 
             output_file.append(temp)
@@ -829,7 +828,6 @@ def create_pokedex_database(dex_creation_data):
     levelup = GARC_file_info()
     eggmov = GARC_file_info()
     mega = GARC_file_info()
-    
     move = GARC_file_info()
     
     #select database for output
@@ -951,6 +949,83 @@ def create_pokedex_database(dex_creation_data):
     levelup_info = garc_parser(levelup, dex_creation_data, which_garc = 'levelup')
     eggmov_info = garc_parser(eggmov, dex_creation_data, which_garc = 'eggmov')
     mega_info = garc_parser(mega, dex_creation_data, which_garc = 'mega')
+    
+    #output the personal file for pokehex
+    with open(os.path.join(os.path.dirname(os.path.abspath(dex_database_output_path)), dex_creation_data.pkhex_personal_file()), "r+b") as personal_output:
+        #write 12 0x00
+        for x in range(0x12):
+            personal_output.write(0x0.to_bytes(1, 'little'))
+        
+        personal_output.write(0xFF.to_bytes(1, 'little'))
+        
+        if(dex_creation_data.game in {'XY'}):
+            for x in range(0x2D):
+                personal_output.write(0x0.to_bytes(1, 'little'))
+        elif(dex_creation_data.game in {'ORAS'}):
+            for x in range(0x3D):
+                personal_output.write(0x0.to_bytes(1, 'little'))
+        elif(dex_creation_data.game in {'SM', 'USUM'}):
+            for x in range(0x41):
+                personal_output.write(0x0.to_bytes(1, 'little'))
+                
+        for x in personal_info:
+            for y in x:
+                personal_output.write(y)
+                
+            
+            
+    #output the levelup file for pokehex
+    with open(os.path.join(os.path.dirname(os.path.abspath(dex_database_output_path)), dex_creation_data.pkhex_levelup_file()), "r+b") as levelup_output:
+        
+        #write first four bytes of header
+        #this is just ASCII lowercase two-character abbreviation for the game
+        match dex_creation_data.game:
+            case 'XY':
+                header = [0x78, 0x79]
+            case 'ORAS':
+                header = [0x61, 0x6F]
+            case 'SM':
+                header = [0x73, 0x6D]
+            case 'USUM':
+                header = [0x75, 0x75]
+                
+        for x in header:
+            levelup_output.write(x.to_bytes(1, 'little'))
+            
+        #next two bytes is number of entries, (including the empty/egg)
+        pointer = len(levelup_info)
+        
+        levelup_output.write(pointer.to_bytes(2, 'little'))
+        
+
+        pointer = pointer*4 + 8
+        
+        #pointer to the empty 0th Pokemon
+        levelup_output.write(pointer.to_bytes(4, 'little'))
+        
+        pointer += 4
+        
+        for number, learnset in enumerate(levelup_info):
+            if(number == 0):
+                pass
+            else:
+                #write the pointer
+                levelup_output.write(pointer.to_bytes(4, 'little'))
+                #increment pointer by length of the learnset info plus 4 more bytes, because we didn't record the FF FF FF FF terminator
+                pointer += len(learnset) + 4
+
+        #if we had 999 Pokemon, we just for-looped 1000 times, the first being the 0th, and have written 1000 pointers (0th through 999th). However, we need one last pointer the end of the file.
+        levelup_output.write(pointer.to_bytes(4, 'little'))
+        
+        #now write the actual learnset data, remembering that the 0th Pokemon is just the terminator, and that we have to write the terminator for everyone
+        
+        for number, learnset in enumerate(levelup_info):
+            if(number != 0):
+                for x in learnset:
+                    levelup_output.write(x.to_bytes(1, 'little'))
+            
+            levelup_output.write(0xFFFFFFFF.to_bytes(4, 'little'))       
+
     
     max_nat_dex = 0
     for personal_pointer, rows in enumerate(personal_info):
