@@ -1090,6 +1090,53 @@ def create_pokedex_database(dex_creation_data):
             file_dex.write(0x0.to_bytes(2, 'little'))
             file_dex.write(dex_creation_data.forme_names[x[3] + 256*x[4]].encode(encoding = 'UTF-16'))
             file_dex.write(0x0.to_bytes(2, 'little'))
+            
+    #1 type name write
+        for x in enumerate(dex_creation_data.type_names):        
+            file_dex.write(x)
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            
+    #2 Ability name write
+        for x in enumerate(dex_creation_data.ability_names):        
+            file_dex.write(x)
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            
+    #3 Ability description write
+        for x in enumerate(dex_creation_data.ability_descriptions):        
+            file_dex.write(x)
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            
+    #4 item name write
+        for x in enumerate(dex_creation_data.item_names):        
+            file_dex.write(x)
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            
+    #5 type descrptois write
+        for x in enumerate(dex_creation_data.item_descriptions):        
+            file_dex.write(x)
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            
+    #6 move names write
+        for x in enumerate(dex_creation_data.move_names):        
+            file_dex.write(x)
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            
+    #7 move descriptions write
+        for x in enumerate(dex_creation_data.move_descriptions):        
+            file_dex.write(x)
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            
+    #8 move descriptions write
+        for x in enumerate(dex_creation_data.trainer_classes):        
+            file_dex.write(x)
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            
+    #9 move descriptions write
+        for x in enumerate(dex_creation_data.trainer_names):        
+            file_dex.write(x)
+            file_dex.write(0x0.to_bytes(2, 'little'))
+                
+
     print('Pokedex created!')
     return
 
