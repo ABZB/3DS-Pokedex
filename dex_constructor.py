@@ -881,6 +881,11 @@ def create_pokedex_database(dex_creation_data):
             personal.start = 0x50
             personal.blocksize = 0x50
             
+            move.path = os.path.join(romfs_path, "a/2/1/2")
+            move.header = [0x42, 0x4D, 0x49, 0x46]
+            move.start = 0x30
+            move.blocksize = 0x24
+            
         case "ORAS":
             #not implemented for XY or ORAS
             eggmov.path = os.path.join(romfs_path, "a/1/9/0")
@@ -907,6 +912,11 @@ def create_pokedex_database(dex_creation_data):
             personal.start = 0x60
             personal.blocksize = 0x50
             
+            move.path = os.path.join(romfs_path, "a/1/8/9")
+            move.header = 
+            move.start = 
+            move.blocksize = 0x28
+            
         case "SM":
          
             eggmov.path = os.path.join(romfs_path, "a/0/1/2")
@@ -932,6 +942,11 @@ def create_pokedex_database(dex_creation_data):
             personal.start = 0x60
             personal.blocksize = 0x54
             
+            move.path = os.path.join(romfs_path, "a/0/1/1")
+            move.header = 
+            move.start = 
+            move.blocksize = 0x28
+            
         case "USUM":
             eggmov.path = os.path.join(romfs_path, "a/0/1/2")
             eggmov.header = [0x42, 0x4D, 0x49, 0x46]
@@ -955,6 +970,11 @@ def create_pokedex_database(dex_creation_data):
             personal.header = [0x42, 0x4D, 0x49, 0x46]
             personal.start = 0x60
             personal.blocksize = 0x54
+            
+            move.path = os.path.join(romfs_path, "a/0/1/1")
+            move.header = 
+            move.start = 
+            move.blocksize = 0x28
     
     personal_info = garc_parser(personal, dex_creation_data, which_garc = 'personal')
     evolution_info = garc_parser(evolution, dex_creation_data, which_garc = 'evolution')
