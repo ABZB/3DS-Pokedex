@@ -993,11 +993,20 @@ def create_pokedex_database(dex_creation_data):
     #table of pointers to specific Pokemon data
         #actual Pokemon data
     #list of type names
+    
+
+
+
+
+    #convert everything to byte
+    for x in output_array:
+        x = int(x).to_bytes(1, 'little')
+
     print('\nWriting database')
 
     with open(dex_database_output_path, "r+b") as file_dex:
         for x in output_array:
-            file_dex.write(int(x).to_bytes(1, 'little'))
+            file_dex.write(x)
     print('Pokedex created!')
     return
 
