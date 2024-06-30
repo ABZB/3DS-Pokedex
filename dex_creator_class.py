@@ -16,6 +16,29 @@ class Dex_creator:
 
         #need this only for XY/ORAS
         self.extracted_egg_moves_folder_path = ''
+        
+
+        #name array variables
+        self.pokemon_names = [] #00 terminator
+        self.forme_names = [] 
+        
+        self.type_names = []
+        
+        self.ability_names = []
+        self.ability_descriptions = []
+        
+        self.dex_data = []
+        
+        self.item_names = []
+        self.item_descriptions = []
+        
+        self.move_names = []
+        self.move_descriptions = []
+        
+        self.trainer_classes = [] #first entry is NOT empty
+        self.trainer_names = []
+        
+
 
 class GARC_file_info:
     def __init__(self):

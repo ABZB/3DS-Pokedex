@@ -75,7 +75,7 @@ game_select.grid(row = 2, column = 0, sticky="ew")
      #   elif(dex_creation_data.pokemon_name_loading_option == ''):
 
 
-name_text_options = ['Forme Insertion CSV', 'User Text File','Default']
+name_text_options = ['Forme Insertion CSV', 'Default'] # 'User Text File',
 
 name_text_options_temp = StringVar(root)
 name_text_options_temp.set("Source For Names")

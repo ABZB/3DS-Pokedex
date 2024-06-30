@@ -1,7 +1,7 @@
-from tkinter import CURRENT
 from dex_creator_file_loader import *
 from dex_creator_class import *
 from utilities import *
+from dex_creator_name_loader import *
 import sys
 
 
