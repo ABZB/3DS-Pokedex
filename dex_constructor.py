@@ -1075,6 +1075,14 @@ def create_pokedex_database(dex_creation_data):
         file_dex.write(0x0.to_bytes(4, 'little'))
 
         #----------------------
+        #begin writing actual data
+        
+        local_offset = offset
+    #0 pokemon table pointer write
+        for x in dex_creation_data.pokemon_data_table_pointers:
+            file_dex.write((local_offset).to_bytes(3, 'little'))
+            local_offset += x
+
     #0 pokemon data write
         for x in output_array:
             file_dex.write(x)
