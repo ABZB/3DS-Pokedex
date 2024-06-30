@@ -792,6 +792,9 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             output_array.append(crnt_levelup[cur + 1])
             output_array.append(crnt_levelup[cur + 2])
         cur += 4
+    
+    dex_creation_data.pokemon_data_table_pointers.append(len(output_array) + len(dex_creation_data.pokemon_names[output_array[3] + 256*output_array[4]]) + len(dex_creation_data.forme_names[output_array[3] + 256*output_array[4]]) + 4)
+
 
     if(forme_pointer != 0 and current_forme + 1 < forme_count):
         #forme starts from 0, e.g. if no alt formes forme count is 1 and current forme is 0
