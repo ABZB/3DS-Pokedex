@@ -514,14 +514,6 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         #don't list in order. First do Mega, then Ultra, then Ability/special (Meloetta, Aegislash, Greninja, Castform, Wishiwashi, Darmanitan), then all others
 
 
-        # forme reference:
-        # 0 = Mega (reference item)
-        # 1 = Ultra  (reference z-crystal)
-        # 2 = Transformed by Move (reference move)
-        # 3 = Transformed by Ability (reference ability)
-        # 4 = Transformed by held item (out of battle)
-        # 5 = Variant Forme
-        # 6 = Base Forme
     
         mega = 0
         ultra = 1
@@ -532,6 +524,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
         base_forme = 6
         fused_forme = 7
         regional_forme = 8
+        primal = 9
         
         # forme, method, needed thing
         done_forme_array = []
@@ -763,6 +756,25 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                 else:
                     output_array.append(0x18)
                     output_array.append(0x03)
+                    
+        #Primal
+        if(nat_dex in {382, 383}):
+            if((current_forme == 0 and 1 not in done_forme_array) or (current_forme == 1 and 0 not in done_forme_array)):
+                output_array[8] += 1
+                output_array.append(1 - current_forme)
+                done_forme_array.append(1 - current_forme)
+                
+                if(current_forme == 0):
+                    output_array.append(transformed_held_item)
+                else:
+                    output_array.append(base_forme)
+                
+                if(nat_dex == 382):
+                    output_array.append(0x17)
+                    output_array.append(0x02)
+                else:
+                    output_array.append(0x16)
+                    output_array.append(0x02)
                 
                 
         #handle all other variant formes
