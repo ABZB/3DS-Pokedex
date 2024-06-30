@@ -1005,6 +1005,76 @@ def create_pokedex_database(dex_creation_data):
     print('\nWriting database')
 
     with open(dex_database_output_path, "r+b") as file_dex:
+    
+        #12 4-byte headers means the first non-header is at 0x30 = 48. which is where table pokemon data starts
+        
+    #0 pokemon table pointer 
+        offset = 0x30
+        file_dex.write(offset.to_bytes(4, 'little'))
+        offset += len(dex_creation_data.pokemon_data_table_pointers)*3
+        offset += len(output_array)
+        
+    #1 type name pointer
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #figure out how long the types will take
+        for x in dex_creation_data.type_names:
+            offset += len(x) + 2
+        
+    #2 ability name pointer
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #figure out how long the types will take
+        for x in dex_creation_data.ability_names:
+            offset += len(x) + 2
+        
+    #3 ability desc pointer
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #figure out how long the types will take
+        for x in dex_creation_data.ability_descriptions:
+            offset += len(x) + 2
+        
+    #4 item name pointer
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #figure out how long the types will take
+        for x in dex_creation_data.item_names:
+            offset += len(x) + 2
+        
+    #5 item desc pointer
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #figure out how long the types will take
+        for x in dex_creation_data.item_descriptions:
+            offset += len(x) + 2
+        
+    #6 move name pointer
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #figure out how long the types will take
+        for x in dex_creation_data.move_names:
+            offset += len(x) + 2
+        
+    #7 move desc pointer
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #figure out how long the types will take
+        for x in dex_creation_data.move_descriptions:
+            offset += len(x) + 2
+            
+        
+    #8 trainer_classes name pointer
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #figure out how long the types will take
+        for x in dex_creation_data.trainer_classes_names:
+            offset += len(x) + 2
+            
+        
+    #9 trainer_names name pointer
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #figure out how long the types will take
+        for x in dex_creation_data.trainer_names_names:
+            offset += len(x) + 2
+    
+        #unused so far
+        file_dex.write(0x0.to_bytes(4, 'little'))
+        file_dex.write(0x0.to_bytes(4, 'little'))
+
+        #----------------------
     #0 pokemon data write
         for x in output_array:
             file_dex.write(x)
