@@ -974,6 +974,25 @@ def create_pokedex_database(dex_creation_data):
     output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, int(evolution.blocksize/8), max_nat_dex)
     sys.setrecursionlimit(default_limit)
     
+
+    #build header for database
+    #4 byte pointers
+    
+    #Table of Pokemon data
+    #type Name
+    #Ability name
+    #Ability Description
+    #item name
+    #item Description
+    #move names
+    #move descriptions
+    #trainer class
+    #trainer name
+    #trainer data
+    
+    #table of pointers to specific Pokemon data
+        #actual Pokemon data
+    #list of type names
     print('\nWriting database')
 
     with open(dex_database_output_path, "r+b") as file_dex:
