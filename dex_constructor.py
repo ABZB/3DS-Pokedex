@@ -1005,8 +1005,13 @@ def create_pokedex_database(dex_creation_data):
     print('\nWriting database')
 
     with open(dex_database_output_path, "r+b") as file_dex:
+    #0 pokemon data write
         for x in output_array:
             file_dex.write(x)
+            file_dex.write(dex_creation_data.pokemon_names[x[3] + 256*x[4]].encode(encoding = 'UTF-16'))
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            file_dex.write(dex_creation_data.forme_names[x[3] + 256*x[4]].encode(encoding = 'UTF-16'))
+            file_dex.write(0x0.to_bytes(2, 'little'))
     print('Pokedex created!')
     return
 
