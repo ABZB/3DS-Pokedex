@@ -9,6 +9,46 @@ def load_database(exporter):
         exporter.datasource = hexdata.read()
         return(exporter)
 
+
+
+def convert_text_from_binary(binary_text_array):
+    #first create an array of the individual strings
+    string_array = []
+    cur = 0
+    temp_string_array = []
+    file_length = len(binary_text_array)
+    
+    while True:
+        #reached end of text
+        if(cur + 3 >= len(file_length)):
+            break
+        #locate terminator
+        elif(binary_text_array[cur + 0] == binary_text_array[cur + 1] == binary_text_array[cur + 2] == binary_text_array[cur + 3] == 0):
+            #write the integers converted to bytes converted back to text to the list of text
+            string_array.append(bytes(temp_string_array).decode(encoding = 'utf-16'))
+            
+            #reset the temp string
+            temp_string_array = []
+        else:
+            temp_string_array.append(binary_text_array[cur])
+            
+    return(string_array)
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def export_pokemon_information(exporter):
     
     #check versions
