@@ -34,19 +34,16 @@ def convert_text_from_binary(binary_text_array):
             
     return(string_array)
 
-        
-
-
-
-
-
-
-
-
-
-
-
-
+def extract_fixed_width_binary(binary_array, blocksize):
+    #first create an array of the individual strings
+    outarray = []
+    block_count = int(len(binary_array)/blocksize)
+    
+    for block_number in range(block_count):
+        start = block_number*blocksize
+        outarray.append(binary_array[start : start + blocksize])
+            
+    return(outarray)
 
 
 def export_pokemon_information(exporter):
@@ -63,7 +60,7 @@ def export_pokemon_information(exporter):
     next_pointer_address = pokemon_data_table_pointer + 3
     last_pointer = pokemon_data_table_pointer + 3*(exporter.max_personal_index - 1)
     
-    type_name_pointer = int_frm_bytes(exporter.datasource, 6)
+    text_pointer = int_frm_bytes(exporter.datasource, 6)
 
     #start from the pointer to Bulbasaur, go up by 3 bytes to next pointereach time we finish. read the data in the range from current pointer to before next pointer
     while True:
@@ -82,35 +79,74 @@ def export_pokemon_information(exporter):
         if(pokemon_data_table_pointer < last_pointer):
             next_pointer_address += 3
         elif(pokemon_data_table_pointer == last_pointer):
-            next_pointer_address = type_name_pointer
+            next_pointer_address = text_pointer
         else:
             break
 
 
+    segment_start_pointer_address = 6
+    segment_end_pointer_address = segment_start_pointer_address + 4
     
-        
+    exporter.type_names = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
     
-	    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
     
-    exporter.move_data
+    exporter.ability_names = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
+    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+    exporter.ability_descriptions = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
+    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+    exporter.dex_data = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
+    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+    exporter.item_names = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
+    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+    exporter.item_descriptions = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
+    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+    exporter.move_names = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
+    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+    exporter.move_descriptions = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
+    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+    exporter.trainer_classes = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
+    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+    exporter.trainer_names = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
+    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+
+    exporter.move_data = extract_fixed_width_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)], 0x27)
 
 
-    #name array variables
-    exporter.pokemon_names = []
-    exporter.forme_names = [] 
-        
-    exporter.type_names = []
-        
-    exporter.ability_names = []
-    exporter.ability_descriptions = []
-        
-    exporter.dex_data = []
-        
-    exporter.item_names = []
-    exporter.item_descriptions = []
-        
-    exporter.move_names = []
-    exporter.move_descriptions = []
-        
-    exporter.trainer_classes = []
-    exporter.trainer_names = []
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+    exporter.pokemon_names = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):int_frm_bytes(exporter.datasource, segment_end_pointer_address)])
+    
+    segment_start_pointer_address += 4
+    segment_end_pointer_address += 4
+    
+    exporter.forme_names = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):])
