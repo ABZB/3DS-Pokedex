@@ -1143,9 +1143,12 @@ def create_pokedex_database(dex_creation_data):
 
     with open(dex_database_output_path, "r+b") as file_dex:
     
+    #-1 Version
+        file_dex.write(dex_creation_data.version_major.to_bytes(1, 'little'))
+        file_dex.write(dex_creation_data.version_minor.to_bytes(1, 'little'))
         
     #0 pokemon table pointer 
-        offset = 0x4*13
+        offset = 0x4*12
         file_dex.write(offset.to_bytes(4, 'little'))
         offset += len(dex_creation_data.pokemon_data_table_pointers)*3
         local_offset = offset

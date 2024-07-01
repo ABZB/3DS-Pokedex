@@ -1,7 +1,8 @@
 class Dex_creator:
-	def __init__(self):
-        #path variables   
-
+	def __init__(self):   
+		self.version_major = 1
+		self.version_minor = 0
+        #path variables
 		self.rom_folder_path = ''
 		self.game = ''
 		self.game_text_path = ''

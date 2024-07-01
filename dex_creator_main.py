@@ -17,16 +17,17 @@ def compile_dex(dex_creation_data):
 def set_checklists(gameinput, textoptioninput):
     games_temp.set(gameinput)
     name_text_options_temp.set(textoptioninput)
+    
 
+dex_creation_data = Dex_creator()
 root = Tk()
-root.title('Pokedex Builder V.1.0')
+root.title('Pokedex Builder V.'+ str(dex_creation_data.version_major) + '.' + str(dex_creation_data.version_minor))
 
 for x in range(3):
     root.columnconfigure(x, weight = 1)
 for x in range(5):
     root.rowconfigure(x, weight = 1)
 
-dex_creation_data = Dex_creator()
 
 
 
