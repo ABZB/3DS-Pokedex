@@ -1148,7 +1148,7 @@ def create_pokedex_database(dex_creation_data):
         file_dex.write(dex_creation_data.version_minor.to_bytes(1, 'little'))
         
     #0 pokemon table pointer 
-        offset = 0x4*0xB + 2
+        offset = 0x4*13 + 2
         file_dex.write(offset.to_bytes(4, 'little'))
         offset += len(dex_creation_data.pokemon_data_table_pointers)*3
         local_offset = offset
@@ -1215,8 +1215,12 @@ def create_pokedex_database(dex_creation_data):
         
 
     #11 pokemon names
+        pokemon_name_pointer_tell = file_dex.tell()
+        file_dex.write(0x0.to_bytes(4, 'little'))
             
     #12 Forme names
+        pokemon_forme_pointer_tell = file_dex.tell()
+        file_dex.write(0x0.to_bytes(4, 'little'))
         
 
 
@@ -1327,15 +1331,29 @@ def create_pokedex_database(dex_creation_data):
                     
                 offset += 0x27
 
-    #11 Pokemon Names         
+    #11 Pokemon Names
+        #go back to the header and write the pointer for this
+        file_dex.seek(pokemon_name_pointer_tell, os.SEEK_SET)
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #return to end of file
+        file_dex.seek(0, os.SEEK_END)
+        
         for x in dex_creation_data.pokemon_names:
             file_dex.write(x)
             file_dex.write(0x0.to_bytes(2, 'little'))
+            offset += len(x) + 2
             
-    #12 Pokemon Formes         
+    #12 Pokemon Formes  
+        #go back to the header and write the pointer for this
+        file_dex.seek(pokemon_forme_pointer_tell, os.SEEK_SET)
+        file_dex.write(offset.to_bytes(4, 'little'))
+        #return to end of file
+        file_dex.seek(0, os.SEEK_END)    
+        
         for x in dex_creation_data.forme_names:
             file_dex.write(x)
             file_dex.write(0x0.to_bytes(2, 'little'))
+            offset += len(x) + 2
             
 
     print('Pokedex created!')
