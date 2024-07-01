@@ -1,9 +1,9 @@
+import sys
 from dex_creator_file_loader import *
 from dex_creator_class import *
 from utilities import *
 from dex_creator_name_loader import *
-import sys
-
+from dex_creator_name_loader import *
 
 
 
@@ -42,6 +42,14 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
             print('Something is wrong with your Garc file ' + which_garc + ', could not locate the header.')
             return(False)
         cur += 1
+        
+
+    #move data for ORAS and later has a different header structure, we are currently pointing at the low byte of the number of move entries + 1 (plus one is for the empty entry)
+    #after this, there are that many + 2 4-byte pointers of some kind (seem to point to middle of move data???)
+    ##immediately after that, we have the empty block
+    ##so we need to jump 2 (so first pointer) + (total count)*4 + (block size) bytes further forwards
+    if(which_garc == 'move' and dex_creation_data.game in {'ORAS', 'SM', 'USUM'}):
+        cur += 2 + 4*(hexdata[cur] + 256*hexdata[cur + 1] + 1) + garc_info.blocksize
     
     #handling for GARCs with fixed blocksizes is straightforward
     if(garc_info.blocksize > 0):
@@ -58,7 +66,7 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
             #logic to avoid doubling up on the personal file
             #if all stats are 0, and the next byte is the same as the very first one we read, we are at compilation, so break
             if(which_garc == 'personal' and (temp[0] == temp[1] == temp[2] == temp[3] == temp[4] == temp[5] == temp[6] == 0) and hexdata[cur] == output_file[1][0]):
-                print('Reached end of Personal file at address ', cur - garc_info.blocksize - 1)
+                #print('Reached end of Personal file at address ', cur - garc_info.blocksize - 1)
                 break
             else:
                 #otherwise append temp to the ongoing list
@@ -108,7 +116,7 @@ def garc_parser(garc_info, dex_creation_data, which_garc = ''):
 
             output_file.append(temp)
             
-            cur += 5
+            cur += 4
             if(cur >= garc_filesize):
                 break
     return(output_file)
@@ -254,7 +262,7 @@ def find_pre_evolutions(evolution_info, nat_dex, current_forme, dex_creation_dat
             evolution_count += 1
     return(list_pre_evolutions) 
 
-def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, max_nat_dex, nat_dex = 1, current_forme = 0, forme_count = 1, pers_pointer = 1, egg_pointer = 1, regional_list = []):
+def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex = 1, current_forme = 0, forme_count = 1, pers_pointer = 1, egg_pointer = 1, regional_list = []):
     
     if(current_forme == 0):
         match nat_dex:
@@ -804,7 +812,7 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
             output_array.append(crnt_levelup[cur + 2])
         cur += 4
     
-    dex_creation_data.pokemon_data_table_pointers.append(len(output_array) + len(dex_creation_data.pokemon_names[output_array[3] + 256*output_array[4]]) + len(dex_creation_data.forme_names[output_array[3] + 256*output_array[4]]) + 4)
+    dex_creation_data.pokemon_data_table_pointers.append(len(output_array))
 
 
     if(forme_pointer != 0 and current_forme + 1 < forme_count):
@@ -819,18 +827,16 @@ def power_construct(personal_info, evolution_info, levelup_info, eggmov_info, me
                 temp_egg_pointer = egg_pointer + 1
         else:
             temp_egg_pointer = 0
-        return([*output_array, *power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, max_nat_dex, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer, regional_list)])
+        return([*output_array, *power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex, current_forme + 1, forme_count, forme_pointer + current_forme, temp_egg_pointer, regional_list)])
     
 
     #personal info has length total personal files + 1.
     #move to next species        
-    elif(nat_dex < max_nat_dex):
-        return([*output_array, *power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, max_nat_dex, nat_dex + 1, 0, 1, nat_dex + 1, nat_dex + 1)])
+    elif(nat_dex < dex_creation_data.max_nat_dex):
+        return([*output_array, *power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, evo_block_size, nat_dex + 1, 0, 1, nat_dex + 1, nat_dex + 1)])
     #reached final pokemon
     else:
         return(output_array)
-
-
 
 def create_pokedex_database(dex_creation_data):
     
@@ -848,12 +854,17 @@ def create_pokedex_database(dex_creation_data):
 
     try:
         open(dex_database_output_path, 'w').close()
-        print('Cleared old data')
+        #print('Cleared old data\n')
     except:
-        print('')
-    print(dex_creation_data.rom_folder_path)
+        print('Could not write to selected Pokedex')
+        return
+    
+    print('Reading data\n')
+    #print(dex_creation_data.rom_folder_path)
+    
     romfs_path = os.path.join(dex_creation_data.rom_folder_path, 'ExtractedRomFS')
-    print(romfs_path)
+    #print(romfs_path)
+    
     match dex_creation_data.game:
         case "XY":
             #not implemented for XY or ORAS
@@ -886,7 +897,7 @@ def create_pokedex_database(dex_creation_data):
             move.start = 0x30
             move.blocksize = 0x24
             
-        case "ORAS":
+        case 'ORAS':
             #not implemented for XY or ORAS
             eggmov.path = os.path.join(romfs_path, "a/1/9/0")
             #eggmov.header = 
@@ -913,9 +924,9 @@ def create_pokedex_database(dex_creation_data):
             personal.blocksize = 0x50
             
             move.path = os.path.join(romfs_path, "a/1/8/9")
-            move.header = 
-            move.start = 
-            move.blocksize = 0x28
+            move.header = [0x42, 0x4D, 0x49, 0x46]
+            move.start = 0x0E
+            move.blocksize = 0x24
             
         case "SM":
          
@@ -943,8 +954,8 @@ def create_pokedex_database(dex_creation_data):
             personal.blocksize = 0x54
             
             move.path = os.path.join(romfs_path, "a/0/1/1")
-            move.header = 
-            move.start = 
+            move.header = [0x42, 0x4D, 0x49, 0x46]
+            move.start = 0x0E
             move.blocksize = 0x28
             
         case "USUM":
@@ -972,8 +983,8 @@ def create_pokedex_database(dex_creation_data):
             personal.blocksize = 0x54
             
             move.path = os.path.join(romfs_path, "a/0/1/1")
-            move.header = 
-            move.start = 
+            move.header = [0x42, 0x4D, 0x49, 0x46]
+            move.start = 0x0E
             move.blocksize = 0x28
     
     personal_info = garc_parser(personal, dex_creation_data, which_garc = 'personal')
@@ -981,7 +992,14 @@ def create_pokedex_database(dex_creation_data):
     levelup_info = garc_parser(levelup, dex_creation_data, which_garc = 'levelup')
     eggmov_info = garc_parser(eggmov, dex_creation_data, which_garc = 'eggmov')
     mega_info = garc_parser(mega, dex_creation_data, which_garc = 'mega')
+    move_info = garc_parser(move, dex_creation_data, which_garc = 'move')
     
+    print('\nCreating Pkhex files\n')
+
+    #make sure file exists
+    with open(os.path.join(os.path.dirname(os.path.abspath(dex_database_output_path)), dex_creation_data.pkhex_personal_file()), "w") as personal_output:
+        pass
+
     #output the personal file for pokehex
     with open(os.path.join(os.path.dirname(os.path.abspath(dex_database_output_path)), dex_creation_data.pkhex_personal_file()), "r+b") as personal_output:
         #write 12 0x00
@@ -1001,11 +1019,15 @@ def create_pokedex_database(dex_creation_data):
                 personal_output.write(0x0.to_bytes(1, 'little'))
                 
         for x in personal_info:
-            for y in x:
-                personal_output.write(y)
+            if(len(x) > 1):
+                for y in x:
+                    personal_output.write(y.to_bytes(1, 'little'))
                 
             
             
+    #make sure file exists
+    with open(os.path.join(os.path.dirname(os.path.abspath(dex_database_output_path)), dex_creation_data.pkhex_levelup_file()), "w") as levelup_output:
+        pass
     #output the levelup file for pokehex
     with open(os.path.join(os.path.dirname(os.path.abspath(dex_database_output_path)), dex_creation_data.pkhex_levelup_file()), "r+b") as levelup_output:
         
@@ -1058,27 +1080,35 @@ def create_pokedex_database(dex_creation_data):
             
             levelup_output.write(0xFFFFFFFF.to_bytes(4, 'little'))       
 
-    
-    max_nat_dex = 0
+
     for personal_pointer, rows in enumerate(personal_info):
         #first time this should happen is the first alt forme, so max nat dex is 1 less
         try:
             if(personal_pointer >= rows[0x1c] + 256*rows[0x1d] and rows[0x1c] + 256*rows[0x1d] != 0x0):
-                max_nat_dex = personal_pointer - 1
+                dex_creation_data.max_nat_dex = personal_pointer - 1
                 break
         except:
             if(personal_pointer == 0):
                 pass
             else:
                 break
+    dex_creation_data.max_personal_index = len(personal_info) - 1
+    
     print('\nLoaded World Data\n')
-    print('Found ' + str(max_nat_dex) + ' species')
-    print('Found ' + str(len(personal_info) - max_nat_dex - 1) + ' variants\n')
+    print('Found ' + str(dex_creation_data.max_nat_dex) + ' species')
+    print('Found ' + str(dex_creation_data.max_personal_index - dex_creation_data.max_nat_dex) + ' variants')
+    print('Total ' + str(dex_creation_data.max_personal_index) + '\n')
 
+
+    #print('Loading Names')
+    #load all the names
+    load_names_from_files(dex_creation_data)
+
+    
 
     default_limit = sys.getrecursionlimit()
     sys.setrecursionlimit(int(2*len(personal_info)))
-    output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, int(evolution.blocksize/8), max_nat_dex)
+    output_array = power_construct(personal_info, evolution_info, levelup_info, eggmov_info, mega_info, dex_creation_data, int(evolution.blocksize/8))
     sys.setrecursionlimit(default_limit)
     
 
@@ -1113,12 +1143,12 @@ def create_pokedex_database(dex_creation_data):
 
     with open(dex_database_output_path, "r+b") as file_dex:
     
-        #12 4-byte headers means the first non-header is at 0x30 = 48. which is where table pokemon data starts
         
     #0 pokemon table pointer 
-        offset = 0x30
+        offset = 0x4*13
         file_dex.write(offset.to_bytes(4, 'little'))
         offset += len(dex_creation_data.pokemon_data_table_pointers)*3
+        local_offset = offset
         offset += len(output_array)
         
     #1 type name pointer
@@ -1167,24 +1197,30 @@ def create_pokedex_database(dex_creation_data):
     #8 trainer_classes name pointer
         file_dex.write(offset.to_bytes(4, 'little'))
         #figure out how long the types will take
-        for x in dex_creation_data.trainer_classes_names:
+        for x in dex_creation_data.trainer_classes:
             offset += len(x) + 2
             
         
     #9 trainer_names name pointer
         file_dex.write(offset.to_bytes(4, 'little'))
         #figure out how long the types will take
-        for x in dex_creation_data.trainer_names_names:
+        for x in dex_creation_data.trainer_names:
             offset += len(x) + 2
     
-        #unused so far
-        file_dex.write(0x0.to_bytes(4, 'little'))
-        file_dex.write(0x0.to_bytes(4, 'little'))
+    #10 move data
+        file_dex.write(offset.to_bytes(4, 'little'))
+        
+
+    #11 pokemon names
+            
+    #12 Forme names
+        
+
+
 
         #----------------------
         #begin writing actual data
         
-        local_offset = offset
     #0 pokemon table pointer write
         for x in dex_creation_data.pokemon_data_table_pointers:
             file_dex.write((local_offset).to_bytes(3, 'little'))
@@ -1192,57 +1228,112 @@ def create_pokedex_database(dex_creation_data):
 
     #0 pokemon data write
         for x in output_array:
-            file_dex.write(x)
-            file_dex.write(dex_creation_data.pokemon_names[x[3] + 256*x[4]].encode(encoding = 'UTF-16'))
-            file_dex.write(0x0.to_bytes(2, 'little'))
-            file_dex.write(dex_creation_data.forme_names[x[3] + 256*x[4]].encode(encoding = 'UTF-16'))
-            file_dex.write(0x0.to_bytes(2, 'little'))
+            file_dex.write(int(x).to_bytes(1, 'little'))
             
     #1 type name write
-        for x in enumerate(dex_creation_data.type_names):        
-            file_dex.write(x)
+        for x in (dex_creation_data.type_names):        
+            file_dex.write(x.to_bytes(1, 'little'))
             file_dex.write(0x0.to_bytes(2, 'little'))
             
     #2 Ability name write
-        for x in enumerate(dex_creation_data.ability_names):        
-            file_dex.write(x)
+        for x in (dex_creation_data.ability_names):        
+            file_dex.write(x.to_bytes(1, 'little'))
             file_dex.write(0x0.to_bytes(2, 'little'))
             
     #3 Ability description write
-        for x in enumerate(dex_creation_data.ability_descriptions):        
-            file_dex.write(x)
+        for x in (dex_creation_data.ability_descriptions):        
+            file_dex.write(x.to_bytes(1, 'little'))
             file_dex.write(0x0.to_bytes(2, 'little'))
             
     #4 item name write
-        for x in enumerate(dex_creation_data.item_names):        
-            file_dex.write(x)
+        for x in (dex_creation_data.item_names):        
+            file_dex.write(x.to_bytes(1, 'little'))
             file_dex.write(0x0.to_bytes(2, 'little'))
             
     #5 type descrptois write
-        for x in enumerate(dex_creation_data.item_descriptions):        
-            file_dex.write(x)
+        for x in (dex_creation_data.item_descriptions):        
+            file_dex.write(x.to_bytes(1, 'little'))
             file_dex.write(0x0.to_bytes(2, 'little'))
             
     #6 move names write
-        for x in enumerate(dex_creation_data.move_names):        
-            file_dex.write(x)
+        for x in (dex_creation_data.move_names):        
+            file_dex.write(x.to_bytes(1, 'little'))
             file_dex.write(0x0.to_bytes(2, 'little'))
             
     #7 move descriptions write
-        for x in enumerate(dex_creation_data.move_descriptions):        
-            file_dex.write(x)
+        for x in (dex_creation_data.move_descriptions):        
+            file_dex.write(x.to_bytes(1, 'little'))
             file_dex.write(0x0.to_bytes(2, 'little'))
             
     #8 move descriptions write
-        for x in enumerate(dex_creation_data.trainer_classes):        
-            file_dex.write(x)
+        for x in (dex_creation_data.trainer_classes):        
+            file_dex.write(x.to_bytes(1, 'little'))
             file_dex.write(0x0.to_bytes(2, 'little'))
             
     #9 move descriptions write
-        for x in enumerate(dex_creation_data.trainer_names):        
-            file_dex.write(x)
+        for x in (dex_creation_data.trainer_names):        
+            file_dex.write(x.to_bytes(1, 'little'))
             file_dex.write(0x0.to_bytes(2, 'little'))
+    
+    #10 move data write
+        for index, move in enumerate(move_info):
+            if(index == 0):
+                pass
+            else:
+                cur = 0
+                #first 9 bytes, 0x0 to 0x08, are the same for all games
+                for x in range(0x09):
+                    file_dex.write(move[cur].to_bytes(1, 'little'))
+                    cur += 1
                 
+                #0x09 is empty in both
+                cur += 1
+                
+                #0x0A through 0x1D are the same
+                
+                for x in range(20):
+                    file_dex.write(move[cur].to_bytes(1, 'little'))
+                    cur += 1
+                
+                #1e and 1f in gen 6 are something else, write those later
+                #in gen 7, next 6 bytes are Z-move (4 bytes) and Refresh stuff (2 bytes)
+                if(dex_creation_data.game in {'XY', 'ORAS'}):
+                    for x in range(6):
+                        file_dex.write(0x0.to_bytes(1, 'little'))
+                        cur += 1
+                elif(dex_creation_data.game in {'SM', 'USUM'}):
+                    for x in range(6):
+                        file_dex.write(move[cur].to_bytes(1, 'little'))
+                        cur += 1
+                        
+                #next 3 bytes are the flags. in XY/ORAS need to jump back to 0x20, in SM/USUM we are in the right spot
+                if(dex_creation_data.game in {'XY', 'ORAS'}):
+                    cur = 0x20
+                for x in range(3):
+                    file_dex.write(move[cur].to_bytes(1, 'little'))
+                    cur += 1
+                    
+                #finally, write those two ??? bytes from gen 6
+                if(dex_creation_data.game in {'XY', 'ORAS'}):
+                    cur = 0x1E
+                    for x in range(2):
+                        file_dex.write(move[cur].to_bytes(1, 'little'))
+                        cur += 1
+                else:
+                    file_dex.write(0x0.to_bytes(2, 'little'))
+                    
+                offset += 0x27
+
+    #11 Pokemon Names         
+        for x in dex_creation_data.pokemon_names:
+            file_dex.write(x.encode(encoding = 'UTF-16'))
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            
+    #12 Pokemon Formes         
+        for x in dex_creation_data.forme_names:
+            file_dex.write(x.encode(encoding = 'UTF-16'))
+            file_dex.write(0x0.to_bytes(2, 'little'))
+            
 
     print('Pokedex created!')
     return

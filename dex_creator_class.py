@@ -20,7 +20,8 @@ class Dex_creator:
 
 		#header variables
 		self.pokemon_data_table_pointers = []
-
+		self.max_nat_dex = 0
+		self.max_personal_index = 0
         
         #name array variables
 		self.pokemon_names = [] #00 terminator
@@ -41,6 +42,7 @@ class Dex_creator:
         
 		self.trainer_classes = [] #first entry is NOT empty
 		self.trainer_names = []
+		
         
 	def pkhex_personal_file(self):
 		match self.game:		
