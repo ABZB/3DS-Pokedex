@@ -94,8 +94,11 @@ def dropbox_workaround_file_rename(old_name, new_name):
 
 
 #grabs the next n bytes (1rst is current offset) and converts from little endian to base 10                            
-def int_frm_bytes(array, offset: int, bytecount = 4) -> int:
+def int_frm_bytes(array, offset = 0, bytecount = 4) -> int:
     int_output = 0
+    
+    bytecount = min(len(array), bytecount)
+    
     for x in range(bytecount):
         int_output += (array[offset + x] << (8*x))
-    return
+    return(int_output)

@@ -7,8 +7,8 @@ class Dex_exportation_thing:
 		self.max_nat_dex = 0
 		self.max_personal_index = 0
         
-		self.pokemon_data
-		self.move_data
+		self.pokemon_data = []
+		self.move_data = []
 
 
         #name array variables
