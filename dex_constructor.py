@@ -850,7 +850,7 @@ def create_pokedex_database(dex_creation_data):
     
     #select database for output
     #don't need this until later, but let's do this first so if it screws up user hasn't waited for everything else
-    dex_database_output_path = asksaveasfilename(title='Select location to save database for Pokedex', defaultextension='.db',filetypes= [('Database','.db')])
+    dex_database_output_path = asksaveasfilename(title='Select location to save database for Pokedex', defaultextension='.pkwd',filetypes= [('Pokemon World Database','.db')])
 
     try:
         open(dex_database_output_path, 'w').close()

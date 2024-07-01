@@ -91,5 +91,11 @@ def dropbox_workaround_file_rename(old_name, new_name):
                                 os.rename(old_name, new_name)
                             except:
                                 print('That did not work. I am going to throw an error now. I was partway through renaming files, so you should delete those folders and restore from your last good GARC.')
-                            
 
+
+#grabs the next n bytes (1rst is current offset) and converts from little endian to base 10                            
+def int_frm_bytes(array, offset: int, bytecount = 4) -> int:
+    int_output = 0
+    for x in range(bytecount):
+        int_output += (array[offset + x] << (8*x))
+    return
