@@ -46,7 +46,7 @@ def extract_fixed_width_binary(binary_array, blocksize):
     return(outarray)
 
 
-def export_pokemon_information(exporter):
+def load_pokemon_information(exporter):
     
     #check versions
     if(exporter.version_major != exporter.datasource[0] or exporter.version_minor != exporter.datasource[1]):
@@ -150,3 +150,10 @@ def export_pokemon_information(exporter):
     segment_end_pointer_address += 4
     
     exporter.forme_names = convert_text_from_binary(exporter.datasource[int_frm_bytes(exporter.datasource, segment_start_pointer_address):])
+
+
+    return(exporter)
+
+
+def create_data_structures(exporter):
+    

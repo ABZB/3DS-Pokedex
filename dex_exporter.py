@@ -17,12 +17,13 @@ for x in range(2):
 
 #load/save config
 cfg_load = Button(root, text = 'Load Pokedex Database', command = lambda: load_database(exporter), height = 2, width = 22, pady = 5, padx = 7)
-cfg_load.grid(row = 0, column = 0, sticky="ew")
+cfg_load.grid(row = 0, column = 0, sticky="nsew")
 
 
-cfg_save = Button(root, text = 'Export Pokemon Information', command = lambda: export_pokemon_information(exporter), height = 2, width = 22, pady = 5, padx = 7)
-cfg_save.grid(row = 0, column = 1, sticky="ew")
+cfg_save = Button(root, text = 'Load Pokemon Information', command = lambda:load_pokemon_information(exporter), height = 2, width = 22, pady = 5, padx = 7)
+cfg_save.grid(row = 0, column = 1, sticky="nsew")
 
-
+cfg_save = Button(root, text = 'Export Move Information to CSV', command = lambda:load_pokemon_information(exporter), height = 2, width = 22, pady = 5, padx = 7)
+cfg_save.grid(row = 1, column = 1, sticky="nsew")
 
 root.mainloop()
