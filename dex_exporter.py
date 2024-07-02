@@ -23,4 +23,6 @@ cfg_load.grid(row = 0, column = 0, sticky="ew")
 cfg_save = Button(root, text = 'Export Pokemon Information', command = lambda: export_pokemon_information(exporter), height = 2, width = 22, pady = 5, padx = 7)
 cfg_save.grid(row = 0, column = 1, sticky="ew")
 
+
+
 root.mainloop()
